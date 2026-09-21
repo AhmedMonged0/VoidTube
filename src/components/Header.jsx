@@ -1,6 +1,6 @@
-import React from 'react';
-import { Play, Bookmark, Server, Sparkles, Compass } from 'lucide-react';
-import { useApp } from '../context/AppContext';
+import React, { useState, useRef, useEffect } from 'react';
+import { Play, Bookmark, Server, Compass, Globe2, ChevronDown } from 'lucide-react';
+import { useApp, REGIONS } from '../context/AppContext';
 import SearchBar from './SearchBar';
 import { INVIDIOUS_INSTANCES } from '../services/instances';
 
@@ -8,24 +8,41 @@ export default function Header() {
   const {
     nav,
     navigateToHome,
-    navigateToBookmarks,
     watchLater,
     setIsWatchLaterOpen,
     setIsInstanceModalOpen,
-    activeInstance
+    activeInstance,
+    region,
+    setRegion
   } = useApp();
+
+  const [showRegionMenu, setShowRegionMenu] = useState(false);
+  const regionMenuRef = useRef(null);
 
   const currentInstanceMeta = INVIDIOUS_INSTANCES.find(i => i.url === activeInstance) || {
     name: new URL(activeInstance || 'https://invidious.io').hostname.replace('www.', ''),
     flag: '🌐'
   };
 
+  const currentRegionMeta = REGIONS.find(r => r.code === region) || REGIONS[0];
+
+  // Close region menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (regionMenuRef.current && !regionMenuRef.current.contains(e.target)) {
+        setShowRegionMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <header className="sticky top-0 z-40 w-full bg-[#0a0a0c]/85 backdrop-blur-xl border-b border-white/[0.06] transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3 sm:gap-4">
         
         {/* Left: Brand Logo */}
-        <div className="flex items-center gap-6 shrink-0">
+        <div className="flex items-center gap-4 sm:gap-6 shrink-0">
           <button
             onClick={navigateToHome}
             className="flex items-center gap-2.5 group text-left focus:outline-none"
@@ -61,28 +78,72 @@ export default function Header() {
             }`}
           >
             <Compass size={14} className={nav.page === 'home' ? 'text-neon-purple' : ''} />
-            Explore
+            استكشف
           </button>
         </div>
 
         {/* Center: Search Bar */}
-        <div className="flex-1 max-w-2xl px-2">
+        <div className="flex-1 max-w-xl px-1 sm:px-2">
           <SearchBar />
         </div>
 
-        {/* Right Actions: Instance & Bookmarks */}
-        <div className="flex items-center gap-2.5 shrink-0">
+        {/* Right Actions: Region Selector, Instance & Bookmarks */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          
+          {/* Region Selector (Default: Egypt 🇪🇬) */}
+          <div ref={regionMenuRef} className="relative">
+            <button
+              onClick={() => setShowRegionMenu(!showRegionMenu)}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-[#141419] hover:bg-[#1a1a24] border border-white/10 text-xs text-void-200 hover:text-white transition-all shadow-sm"
+              title="تغيير المنطقة والمحتوى"
+            >
+              <span className="text-sm">{currentRegionMeta.flag}</span>
+              <span className="font-medium text-[11px] hidden sm:inline">{currentRegionMeta.name}</span>
+              <ChevronDown size={12} className="text-void-500" />
+            </button>
+
+            {/* Region Dropdown */}
+            {showRegionMenu && (
+              <div className="absolute right-0 top-full mt-2 w-44 py-1.5 bg-[#14141c] border border-white/10 rounded-xl shadow-2xl z-50 animate-fade-in">
+                <div className="px-3 py-1 text-[10px] font-semibold text-void-500 border-b border-white/5 uppercase tracking-wider">
+                  منطقة المحتوى
+                </div>
+                {REGIONS.map((r) => (
+                  <button
+                    key={r.code}
+                    onClick={() => {
+                      setRegion(r.code);
+                      setShowRegionMenu(false);
+                      navigateToHome();
+                    }}
+                    className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-white/10 transition-colors ${
+                      region === r.code ? 'text-neon-purple font-bold bg-neon-purple/10' : 'text-void-200'
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{r.flag}</span>
+                      <span>{r.name}</span>
+                    </span>
+                    {region === r.code && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-neon-purple shadow-neon-purple" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Active Instance Button */}
           <button
             onClick={() => setIsInstanceModalOpen(true)}
-            title="Invidious Instance status & switcher"
+            title="حالة خادم Invidious والتبديل"
             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141419] hover:bg-[#1c1c24] border border-white/5 text-xs text-void-300 hover:text-void-100 transition-all duration-150"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            <span className="font-medium text-[11px] truncate max-w-[100px]">
+            <span className="font-medium text-[11px] truncate max-w-[85px]">
               {currentInstanceMeta.name}
             </span>
             <Server size={13} className="text-void-500" />
@@ -92,7 +153,7 @@ export default function Header() {
           <button
             onClick={() => setIsWatchLaterOpen(true)}
             className="relative flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141419] hover:bg-[#1a1a24] border border-white/10 text-void-200 hover:text-white transition-all duration-150 group"
-            title="Watch Later list"
+            title="قائمة المشاهدة لاحقاً"
           >
             <Bookmark
               size={16}
@@ -101,7 +162,7 @@ export default function Header() {
               }`}
             />
             <span className="hidden md:inline text-xs font-semibold">
-              Watch Later
+              المشاهدة لاحقاً
             </span>
             {watchLater.length > 0 && (
               <span className="flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-neon-purple text-[10px] font-bold text-white shadow-glow-sm">

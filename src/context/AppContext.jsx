@@ -7,7 +7,16 @@ const STORAGE_KEYS = {
   WATCH_LATER: 'voidtube_watch_later_v1',
   FAVORITES: 'voidtube_favorites_v1',
   HISTORY: 'voidtube_history_v1',
+  REGION: 'voidtube_region_v1',
+  RECENT_SEARCHES: 'voidtube_recent_searches_v1',
 };
+
+export const REGIONS = [
+  { code: 'EG', name: 'مصر', flag: '🇪🇬', defaultQuery: 'تريند مصر' },
+  { code: 'SA', name: 'السعودية', flag: '🇸🇦', defaultQuery: 'تريند السعودية' },
+  { code: 'AR', name: 'الوطن العربي', flag: '🌍', defaultQuery: 'محتوى عربي رائج' },
+  { code: 'US', name: 'Global / US', flag: '🌐', defaultQuery: 'trending' },
+];
 
 function safeGetStorage(key, fallback = []) {
   try {
@@ -46,6 +55,15 @@ export function AppProvider({ children }) {
   const [favorites, setFavorites] = useState(() => safeGetStorage(STORAGE_KEYS.FAVORITES));
   const [history, setHistory] = useState(() => safeGetStorage(STORAGE_KEYS.HISTORY));
 
+  // Region setting (Default to Egypt 'EG')
+  const [region, setRegionState] = useState(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.REGION);
+    return saved || 'EG';
+  });
+
+  // Recent Searches
+  const [recentSearches, setRecentSearches] = useState(() => safeGetStorage(STORAGE_KEYS.RECENT_SEARCHES));
+
   // UI Drawers & Modals
   const [isWatchLaterOpen, setIsWatchLaterOpen] = useState(false);
   const [isInstanceModalOpen, setIsInstanceModalOpen] = useState(false);
@@ -59,6 +77,37 @@ export function AppProvider({ children }) {
       setActiveInstance(newUrl);
     });
     return unsub;
+  }, []);
+
+  // Set region and save
+  const setRegion = useCallback((newRegion) => {
+    setRegionState(newRegion);
+    localStorage.setItem(STORAGE_KEYS.REGION, newRegion);
+  }, []);
+
+  // Recent searches management
+  const addRecentSearch = useCallback((term) => {
+    if (!term || !term.trim()) return;
+    const clean = term.trim();
+    setRecentSearches(prev => {
+      const filtered = prev.filter(t => t.toLowerCase() !== clean.toLowerCase());
+      const updated = [clean, ...filtered].slice(0, 10);
+      safeSetStorage(STORAGE_KEYS.RECENT_SEARCHES, updated);
+      return updated;
+    });
+  }, []);
+
+  const removeRecentSearch = useCallback((term) => {
+    setRecentSearches(prev => {
+      const updated = prev.filter(t => t !== term);
+      safeSetStorage(STORAGE_KEYS.RECENT_SEARCHES, updated);
+      return updated;
+    });
+  }, []);
+
+  const clearRecentSearches = useCallback(() => {
+    setRecentSearches([]);
+    safeSetStorage(STORAGE_KEYS.RECENT_SEARCHES, []);
   }, []);
 
   // Listen to browser popstate (back/forward button)
@@ -97,7 +146,6 @@ export function AppProvider({ children }) {
     setNav({ page: 'watch', videoId, query: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Also record in recent watch history if data provided
     if (videoData) {
       setHistory(prev => {
         const filtered = prev.filter(v => (v.videoId || v.id) !== videoId);
@@ -111,10 +159,11 @@ export function AppProvider({ children }) {
   const navigateToSearch = useCallback((query) => {
     if (!query || !query.trim()) return;
     const cleanQuery = query.trim();
+    addRecentSearch(cleanQuery);
     window.history.pushState({}, '', `?q=${encodeURIComponent(cleanQuery)}`);
     setNav({ page: 'search', query: cleanQuery, videoId: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [addRecentSearch]);
 
   const navigateToBookmarks = useCallback(() => {
     window.history.pushState({}, '', `?page=bookmarks`);
@@ -131,9 +180,8 @@ export function AppProvider({ children }) {
       const exists = prev.some(v => (v.videoId || v.id) === id);
       let next;
       if (exists) {
-        next = prev.filter(v => (v.videoId || v.id) !== id);
+        next = prev.filter(v => (v.videoId || v.id) === id);
       } else {
-        // Standardize item representation
         const item = {
           videoId: id,
           title: video.title || 'Untitled Video',
@@ -195,6 +243,12 @@ export function AppProvider({ children }) {
         activeInstance,
         switchInstance,
         history,
+        region,
+        setRegion,
+        recentSearches,
+        addRecentSearch,
+        removeRecentSearch,
+        clearRecentSearches,
       }}
     >
       {children}
