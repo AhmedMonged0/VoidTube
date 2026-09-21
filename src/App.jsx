@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
@@ -9,10 +9,19 @@ import WatchLaterDrawer from './components/WatchLaterDrawer';
 import InstanceSelectorModal from './components/InstanceSelectorModal';
 import InstallAppBanner from './components/InstallAppBanner';
 import UpdateToast from './components/UpdateToast';
-import { Shield, Zap, Heart } from 'lucide-react';
+import ApkDownloadModal from './components/ApkDownloadModal';
+import MobileBottomNav from './components/MobileBottomNav';
+import { Shield, Zap } from 'lucide-react';
 
 function AppContent() {
   const { nav } = useApp();
+  const [isApkModalOpen, setIsApkModalOpen] = useState(false);
+
+  useEffect(() => {
+    const handleOpenApk = () => setIsApkModalOpen(true);
+    window.addEventListener('voidtube-open-apk-modal', handleOpenApk);
+    return () => window.removeEventListener('voidtube-open-apk-modal', handleOpenApk);
+  }, []);
 
   const renderPage = () => {
     switch (nav.page) {
@@ -30,22 +39,26 @@ function AppContent() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0a0a0c] text-[#f1f1f5]">
-      {/* Sticky Top Header */}
-      <Header />
+      {/* Sticky Top Header (Responsive Desktop & Mobile) */}
+      <Header onOpenApkModal={() => setIsApkModalOpen(true)} />
 
-      {/* Main Page Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Main Page Container with bottom padding for mobile navigation bar */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pb-24 md:pb-8">
         {renderPage()}
       </main>
 
-      {/* Slide-out Drawers & Dialogs */}
+      {/* Mobile Sticky Bottom Navigation Bar (md:hidden) */}
+      <MobileBottomNav onOpenApkModal={() => setIsApkModalOpen(true)} />
+
+      {/* Slide-out Drawers & Modals */}
       <WatchLaterDrawer />
       <InstanceSelectorModal />
-      <InstallAppBanner />
+      <InstallAppBanner onOpenApkModal={() => setIsApkModalOpen(true)} />
       <UpdateToast />
+      <ApkDownloadModal isOpen={isApkModalOpen} onClose={() => setIsApkModalOpen(false)} />
 
-      {/* Minimalist Cinematic Footer */}
-      <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16">
+      {/* Minimalist Cinematic Footer (Desktop view) */}
+      <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-void-500">
           <div className="flex items-center gap-3">
             <span className="font-extrabold text-white tracking-wider flex items-center gap-1">
