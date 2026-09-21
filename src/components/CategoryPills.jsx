@@ -1,15 +1,17 @@
 import React from 'react';
-import { Flame, Mic, Trophy, Lightbulb, Film, Music, Gamepad2, Cpu, Sparkles } from 'lucide-react';
+import { Flame, UtensilsCrossed, Mic, Trophy, Laugh, Camera, Lightbulb, Film, Music, Gamepad2 } from 'lucide-react';
 
 export const ARABIC_CATEGORIES = [
-  { id: 'all', label: '🇪🇬 تريند مصر', icon: Flame, query: 'تريند مصر' },
+  { id: 'all', label: 'الرئيسية', icon: Flame, query: 'محتوى مصري' },
+  { id: 'cooking', label: '🍳 طبخ وأكلات مصرية', icon: UtensilsCrossed, query: 'اكلات مصرية طبخ سهلة نادية السيد' },
   { id: 'podcast', label: '🎙️ بودكاست ومقابلات', icon: Mic, query: 'بودكاست مصري' },
-  { id: 'football', label: '⚽ كورة وملخصات', icon: Trophy, query: 'ملخص كورة واهداف' },
-  { id: 'science', label: '💡 علوم ومعرفة', icon: Lightbulb, query: 'الدحيح وثائقي' },
-  { id: 'cinema', label: '🎬 سينما ومسلسلات', icon: Film, query: 'ملخصات افلام ومسلسلات' },
+  { id: 'football', label: '⚽ كورة وملخصات', icon: Trophy, query: 'ملخص اهداف الاهلي والزمالك كورة' },
+  { id: 'comedy', label: '😂 كوميديا واسكتشات', icon: Laugh, query: 'كوميديا واسكتشات مصرية' },
+  { id: 'vlogs', label: '🚗 فلوجات وجولات مصر', icon: Camera, query: 'جولة اكل شوارع مصر فلوج' },
+  { id: 'science', label: '💡 علوم ومعرفة', icon: Lightbulb, query: 'الدحيح علوم ومعرفة' },
+  { id: 'cinema', label: '🎬 مسلسلات وسينما', icon: Film, query: 'ملخصات افلام ومسلسلات مصرية' },
   { id: 'music', label: '🎵 طرب وموسيقى', icon: Music, query: 'اغاني مصرية جديدة' },
   { id: 'gaming', label: '🎮 ألعاب وجيمينج', icon: Gamepad2, query: 'العاب وجيمينج عربي' },
-  { id: 'tech', label: '💻 تقنية وتكنولوجيا', icon: Cpu, query: 'تكنولوجيا ومراجعات' },
 ];
 
 export default function CategoryPills({ activeCategory, onSelectCategory }) {
@@ -17,7 +19,6 @@ export default function CategoryPills({ activeCategory, onSelectCategory }) {
     <div className="w-full overflow-x-auto no-scrollbar py-2">
       <div className="flex items-center gap-2 min-w-max pb-1">
         {ARABIC_CATEGORIES.map((cat) => {
-          const Icon = cat.icon;
           const isActive = activeCategory === cat.id;
 
           return (

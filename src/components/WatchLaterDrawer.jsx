@@ -41,12 +41,12 @@ export default function WatchLaterDrawer() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  Watch Later
-                  <span className="px-2 py-0.5 rounded-full bg-void-800 text-xs text-neon-purple border border-white/5">
+                  المشاهدة لاحقاً
+                  <span className="px-2 py-0.5 rounded-full bg-void-800 text-xs text-neon-purple border border-white/5 font-semibold">
                     {watchLater.length}
                   </span>
                 </h2>
-                <p className="text-[11px] text-void-400">Stored locally in your browser</p>
+                <p className="text-[11px] text-void-400">محفوظة محلياً على جهازك</p>
               </div>
             </div>
 
@@ -55,7 +55,7 @@ export default function WatchLaterDrawer() {
                 <button
                   onClick={clearAllWatchLater}
                   className="p-1.5 rounded-lg text-void-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                  title="Clear all saved videos"
+                  title="مسح كل القائمة"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -76,9 +76,9 @@ export default function WatchLaterDrawer() {
                 <div className="w-12 h-12 rounded-2xl bg-void-800/80 border border-white/5 flex items-center justify-center text-void-500 mb-3">
                   <Bookmark size={22} />
                 </div>
-                <h3 className="text-sm font-semibold text-void-200 mb-1">Your playlist is empty</h3>
+                <h3 className="text-sm font-semibold text-void-200 mb-1">قائمتك فارغة</h3>
                 <p className="text-xs text-void-400 max-w-xs mb-5">
-                  Hover over any video card and click the bookmark icon to save it for later.
+                  مرر فوق أي فيديو واضغط على علامة الإشارة المرجعية لحفظه للمشاهدة لاحقاً.
                 </p>
                 <button
                   onClick={() => {
@@ -87,14 +87,15 @@ export default function WatchLaterDrawer() {
                   }}
                   className="flex items-center gap-2 px-4 py-2 rounded-full bg-void-800 hover:bg-void-750 text-void-200 hover:text-white text-xs font-medium border border-white/10 transition-all"
                 >
-                  Explore Trending Videos
+                  استكشف الفيديوهات
                   <ArrowRight size={13} />
                 </button>
               </div>
             ) : (
               watchLater.map((video) => {
                 const vidId = video.videoId || video.id;
-                const thumb = getBestThumbnail(video.videoThumbnails, vidId) || `https://i.ytimg.com/vi/${vidId}/mqdefault.jpg`;
+                // Guaranteed thumbnail with fallback
+                const thumb = video.thumbnail || getBestThumbnail(video.videoThumbnails, vidId);
                 const duration = formatDuration(video.lengthSeconds);
 
                 return (
@@ -110,6 +111,10 @@ export default function WatchLaterDrawer() {
                       <img
                         src={thumb}
                         alt={video.title}
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+                        }}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                       <div className="absolute inset-0 bg-black/30 group-hover:bg-black/10 transition-colors flex items-center justify-center">
@@ -128,12 +133,13 @@ export default function WatchLaterDrawer() {
                     <div className="flex-1 min-w-0 pr-1">
                       <h4
                         onClick={() => handlePlay(video)}
+                        dir="auto"
                         className="text-xs font-semibold text-void-100 group-hover:text-white line-clamp-2 leading-snug cursor-pointer mb-1"
                         title={video.title}
                       >
                         {video.title}
                       </h4>
-                      <p className="text-[11px] text-void-400 truncate">
+                      <p className="text-[11px] text-void-400 truncate" dir="auto">
                         {video.author}
                       </p>
                     </div>
@@ -142,7 +148,7 @@ export default function WatchLaterDrawer() {
                     <button
                       onClick={() => removeWatchLater(vidId)}
                       className="p-2 text-void-500 hover:text-red-400 rounded-lg hover:bg-red-500/10 transition-colors"
-                      title="Remove from playlist"
+                      title="إزالة من القائمة"
                     >
                       <Trash2 size={15} />
                     </button>
@@ -160,7 +166,7 @@ export default function WatchLaterDrawer() {
                 className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-neon-purple hover:bg-purple-600 text-white text-xs font-semibold shadow-neon-purple transition-all"
               >
                 <Play size={14} className="fill-white" />
-                Play All (Start with First)
+                تشغيل الكل (ابدأ بالأول)
               </button>
             </div>
           )}

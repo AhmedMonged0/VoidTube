@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bookmark, Check, Play, Eye, Clock, CheckCircle2 } from 'lucide-react';
+import { Bookmark, Check, Play, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatDuration, formatViews, formatTimeAgo, getBestThumbnail } from '../utils/formatters';
 
@@ -11,25 +11,26 @@ export default function VideoCard({ video, priority = false }) {
   const videoId = video.videoId || video.id;
   const bookmarked = isWatchLater(videoId);
 
-  // Compute thumbnail URL
-  const thumbnail = !imgError
-    ? (getBestThumbnail(video.videoThumbnails, videoId) || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`)
-    : `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+  // High-reliability thumbnail
+  const defaultThumb = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+  const thumbnail = !imgError ? (getBestThumbnail(video.videoThumbnails, videoId) || defaultThumb) : `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
 
   const duration = formatDuration(video.lengthSeconds);
   const views = formatViews(video.viewCount || video.viewCountText);
   const timeAgo = formatTimeAgo(video.published || video.publishedText);
-  const author = video.author || video.authorName || 'Creator';
+  const author = video.author || video.authorName || 'قناة';
 
   const handleClick = (e) => {
-    // If click was on the bookmark button, don't navigate
     if (e.target.closest('.bookmark-btn')) return;
     navigateToWatch(videoId, video);
   };
 
   const handleBookmarkToggle = (e) => {
     e.stopPropagation();
-    toggleWatchLater(video);
+    toggleWatchLater({
+      ...video,
+      thumbnail: defaultThumb
+    });
   };
 
   return (
@@ -43,13 +44,13 @@ export default function VideoCard({ video, priority = false }) {
       <div className="relative w-full aspect-video bg-[#0a0a0e] overflow-hidden">
         <img
           src={thumbnail}
-          alt={video.title || 'Video thumbnail'}
+          alt={video.title || 'صورة الفيديو'}
           loading={priority ? 'eager' : 'lazy'}
           onError={() => setImgError(true)}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
         />
 
-        {/* Ambient Dark Gradient on bottom of thumbnail */}
+        {/* Ambient Dark Gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 pointer-events-none" />
 
         {/* Hover Center Play Button Badge */}
@@ -66,7 +67,7 @@ export default function VideoCard({ video, priority = false }) {
           </div>
         )}
 
-        {/* Quick Save to Watch Later Button (Top Right on Hover or if saved) */}
+        {/* Quick Save to Watch Later Button */}
         <button
           type="button"
           onClick={handleBookmarkToggle}
@@ -75,14 +76,14 @@ export default function VideoCard({ video, priority = false }) {
               ? 'bg-neon-purple text-white shadow-neon-purple opacity-100'
               : 'bg-black/70 text-white/80 hover:text-white hover:bg-black/90 opacity-0 group-hover:opacity-100'
           }`}
-          title={bookmarked ? 'Remove from Watch Later' : 'Save to Watch Later'}
+          title={bookmarked ? 'إزالة من المشاهدة لاحقاً' : 'حفظ للمشاهدة لاحقاً'}
         >
           {bookmarked ? <Check size={14} strokeWidth={2.8} /> : <Bookmark size={14} />}
         </button>
       </div>
 
       {/* Metadata Section */}
-      <div className="p-4 flex flex-col flex-1 justify-between gap-3">
+      <div className="p-4 flex flex-col flex-1 justify-between gap-3 text-right" dir="auto">
         {/* Title */}
         <h3
           className="text-sm font-semibold text-void-100 group-hover:text-white line-clamp-2 leading-snug transition-colors"

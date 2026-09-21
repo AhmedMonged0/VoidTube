@@ -40,7 +40,13 @@ class InvidiousApiService {
    * Resilient fetcher: tries current instance, falls back through pool if error occurs
    */
   async fetchWithFallback(endpoint, queryParams = {}, options = {}) {
-    const queryStr = new URLSearchParams(queryParams).toString();
+    // Always include hl=ar and region=EG by default for authentic Arabic content
+    const mergedParams = {
+      hl: 'ar',
+      ...queryParams
+    };
+
+    const queryStr = new URLSearchParams(mergedParams).toString();
     const fullEndpoint = queryStr ? `${endpoint}?${queryStr}` : endpoint;
     const cacheKey = fullEndpoint;
 
@@ -52,7 +58,7 @@ class InvidiousApiService {
       }
     }
 
-    // Build list of instances to try, starting with currentInstance
+    // Build list of instances to try
     const instancesToTry = [
       this.currentInstance,
       ...INVIDIOUS_INSTANCES.map(i => i.url).filter(u => u !== this.currentInstance)
@@ -64,13 +70,14 @@ class InvidiousApiService {
       const url = `${base}${fullEndpoint}`;
       try {
         const controller = new AbortController();
-        const timeoutMs = options.timeoutMs || 6000;
+        const timeoutMs = options.timeoutMs || 6500;
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         const res = await fetch(url, {
           signal: controller.signal,
           headers: {
             'Accept': 'application/json',
+            'Accept-Language': 'ar,ar-EG;q=0.9,en;q=0.8',
           },
         });
 
@@ -101,56 +108,72 @@ class InvidiousApiService {
   }
 
   /**
-   * Get Trending Videos with region support (default: EG for Egypt)
+   * Get Trending Videos with region support
    */
   async getTrending(region = 'EG') {
-    return this.fetchWithFallback('/api/v1/trending', { region });
+    return this.fetchWithFallback('/api/v1/trending', { region, hl: 'ar' });
   }
 
   /**
-   * Get Combined Rich Explore Feed (Loads multiple pages for a high volume of videos)
+   * Get Rich, Diverse Egyptian Everyday Feed (Cooking, Vlogs, Podcasts, Culture, Comedy)
    */
-  async getExploreFeed({ region = 'EG', page = 1, category = 'all' } = {}) {
-    const regionalQueryMap = {
-      EG: 'تريند مصر',
-      SA: 'تريند السعودية',
-      AR: 'محتوى عربي رائج',
-      US: 'trending'
-    };
+  async getExploreFeed({ region = 'EG', page = 1 } = {}) {
+    if (region === 'EG') {
+      // Curated diverse Egyptian topics for everyday viewing
+      const egyptianTopics = [
+        'اكلات مصرية طبخ سهلة',
+        'فلوجات مصر جولات',
+        'بودكاست مصري حوار',
+        'الدحيح معرفة',
+        'كوميديا مصرية مواقف',
+        'ملخص اهداف الدوري المصري'
+      ];
 
-    const query = regionalQueryMap[region] || 'تريند مصر';
-
-    // In page 1, fetch both trending and top search items to maximize video quantity (35+ videos)
-    if (page === 1) {
       try {
-        const [trendingData, searchData] = await Promise.allSettled([
-          this.getTrending(region),
-          this.searchVideos(query, 'video', 1)
-        ]);
+        // Fetch topics in parallel with pagination support
+        const topicIndex = (page - 1) % egyptianTopics.length;
+        const selectedTopics = [
+          egyptianTopics[topicIndex],
+          egyptianTopics[(topicIndex + 1) % egyptianTopics.length],
+          egyptianTopics[(topicIndex + 2) % egyptianTopics.length]
+        ];
 
-        const trendingList = trendingData.status === 'fulfilled' && Array.isArray(trendingData.value) ? trendingData.value : [];
-        const searchList = searchData.status === 'fulfilled' && Array.isArray(searchData.value) ? searchData.value : [];
+        const fetchPage = Math.floor((page - 1) / egyptianTopics.length) + 1;
 
-        // Merge and deduplicate by videoId
-        const seen = new Set();
+        const results = await Promise.allSettled(
+          selectedTopics.map(q => this.searchVideos(q, 'video', fetchPage))
+        );
+
         const combined = [];
+        const seen = new Set();
 
-        for (const item of [...searchList, ...trendingList]) {
-          const id = item.videoId || item.id;
-          if (id && !seen.has(id)) {
-            seen.add(id);
-            combined.push(item);
+        const lists = results
+          .filter(r => r.status === 'fulfilled' && Array.isArray(r.value))
+          .map(r => r.value);
+
+        const maxLen = Math.max(...lists.map(l => l.length), 0);
+
+        // Interleave topics for a balanced, vibrant feed
+        for (let i = 0; i < maxLen; i++) {
+          for (const list of lists) {
+            if (list[i]) {
+              const id = list[i].videoId || list[i].id;
+              if (id && !seen.has(id)) {
+                seen.add(id);
+                combined.push(list[i]);
+              }
+            }
           }
         }
 
         if (combined.length > 0) return combined;
-      } catch (e) {
-        console.warn('[VoidTube] Combined explore failed, falling back to search:', e);
+      } catch (err) {
+        console.warn('[VoidTube] Interleaved Egyptian feed error, fallback to search:', err);
       }
     }
 
-    // Pagination (page >= 2 or fallback)
-    return this.searchVideos(query, 'video', page);
+    // Default fallback
+    return this.searchVideos(region === 'EG' ? 'محتوى مصري' : 'trending', 'video', page);
   }
 
   /**
@@ -161,7 +184,9 @@ class InvidiousApiService {
     return this.fetchWithFallback('/api/v1/search', {
       q: query.trim(),
       type,
-      page
+      page,
+      hl: 'ar',
+      region: 'EG'
     });
   }
 
@@ -174,18 +199,18 @@ class InvidiousApiService {
 
     // 1. Try Invidious API suggestions endpoint
     try {
-      const data = await this.fetchWithFallback('/api/v1/search/suggestions', { q: cleanQuery }, { timeoutMs: 3000 });
+      const data = await this.fetchWithFallback('/api/v1/search/suggestions', { q: cleanQuery, hl: 'ar' }, { timeoutMs: 2500 });
       if (data && Array.isArray(data.suggestions)) {
         return data.suggestions;
       }
     } catch (e) {
-      console.warn('[VoidTube] Invidious suggestions failed, trying fallback:', e);
+      console.warn('[VoidTube] Invidious suggestions fallback:', e);
     }
 
     // 2. Direct fallback to YouTube Suggest endpoint
     try {
-      const res = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=${encodeURIComponent(cleanQuery)}`, {
-        signal: AbortSignal.timeout(3000)
+      const res = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&hl=ar&gl=eg&q=${encodeURIComponent(cleanQuery)}`, {
+        signal: AbortSignal.timeout(2500)
       });
       if (res.ok) {
         const data = await res.json();
@@ -201,11 +226,11 @@ class InvidiousApiService {
   }
 
   /**
-   * Get Single Video Details (Includes formatStreams, description, recommendedVideos)
+   * Get Single Video Details
    */
   async getVideoDetails(videoId) {
     if (!videoId) throw new Error('Video ID is required');
-    return this.fetchWithFallback(`/api/v1/videos/${videoId}`);
+    return this.fetchWithFallback(`/api/v1/videos/${videoId}`, { hl: 'ar', region: 'EG' });
   }
 
   /**
