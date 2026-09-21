@@ -10,22 +10,24 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  Copy
+  Download
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatViews, formatTimeAgo } from '../../utils/formatters';
+import DownloadModal from './DownloadModal';
 
 export default function VideoDetails({ videoData, videoId }) {
   const { isWatchLater, toggleWatchLater, navigateToSearch } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
 
   if (!videoData) return null;
 
   const bookmarked = isWatchLater(videoId);
   const views = formatViews(videoData.viewCount);
   const timeAgo = formatTimeAgo(videoData.published || videoData.publishedText);
-  const likes = videoData.likeCount ? formatViews(videoData.likeCount).replace('views', 'likes') : null;
+  const likes = videoData.likeCount ? formatViews(videoData.likeCount).replace('مشاهدة', 'إعجاب') : null;
 
   const handleCopyLink = () => {
     const url = window.location.href;
@@ -41,19 +43,18 @@ export default function VideoDetails({ videoData, videoId }) {
     }
   };
 
-  // Format description with URLs
-  const descriptionText = videoData.description || 'No description provided.';
+  const descriptionText = videoData.description || 'لا يوجد وصف متاح لهذا الفيديو.';
 
   return (
-    <div className="flex flex-col gap-4 mt-4">
+    <div className="flex flex-col gap-4 mt-4" dir="rtl">
       {/* Video Title */}
-      <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug">
+      <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-snug text-right">
         {videoData.title}
       </h1>
 
       {/* Channel Bar & Action Buttons */}
       <div className="flex flex-wrap items-center justify-between gap-4 py-2 border-b border-white/[0.06]">
-        {/* Left: Channel Info */}
+        {/* Right (in RTL): Channel Info */}
         <div className="flex items-center gap-3">
           {/* Channel Avatar */}
           <div
@@ -67,7 +68,7 @@ export default function VideoDetails({ videoData, videoId }) {
                 className="w-full h-full object-cover"
               />
             ) : (
-              (videoData.author?.[0] || 'C').toUpperCase()
+              (videoData.author?.[0] || 'ق').toUpperCase()
             )}
           </div>
 
@@ -91,50 +92,63 @@ export default function VideoDetails({ videoData, videoId }) {
 
           <button
             onClick={handleChannelClick}
-            className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-void-800 hover:bg-void-750 text-void-300 hover:text-white text-xs font-medium border border-white/5 transition-all"
+            className="mr-2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-void-800 hover:bg-void-750 text-void-300 hover:text-white text-xs font-medium border border-white/5 transition-all"
           >
             <Search size={12} />
-            Videos
+            فيديوهات القناة
           </button>
         </div>
 
-        {/* Right: Actions */}
+        {/* Left (in RTL): Actions */}
         <div className="flex items-center gap-2">
-          {/* Like Count (if available) */}
-          {likes && (
-            <div className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#141419] border border-white/5 text-xs text-void-300">
-              <ThumbsUp size={14} className="text-void-400" />
-              <span>{likes}</span>
-            </div>
-          )}
+          {/* Download Button */}
+          <button
+            onClick={() => setIsDownloadOpen(true)}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-neon-purple/20 hover:bg-neon-purple text-neon-purple hover:text-white border border-neon-purple/30 text-xs font-semibold shadow-sm transition-all"
+            title="تنزيل الفيديو بجودة عالية أو صوت فقط"
+          >
+            <Download size={14} />
+            <span>تنزيل</span>
+          </button>
 
           {/* Bookmark (Watch Later) Button */}
           <button
-            onClick={() => toggleWatchLater(videoData)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
+            onClick={() => toggleWatchLater({
+              ...videoData,
+              thumbnail: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+            })}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold transition-all duration-200 ${
               bookmarked
                 ? 'bg-neon-purple text-white shadow-neon-purple'
                 : 'bg-[#141419] hover:bg-[#1a1a24] text-void-200 hover:text-white border border-white/5'
             }`}
           >
             {bookmarked ? <Check size={14} strokeWidth={2.8} /> : <Bookmark size={14} />}
-            <span>{bookmarked ? 'Saved' : 'Watch Later'}</span>
+            <span>{bookmarked ? 'تم الحفظ' : 'مشاهدة لاحقاً'}</span>
           </button>
 
           {/* Share Button */}
           <button
             onClick={handleCopyLink}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-[#141419] hover:bg-[#1a1a24] text-void-200 hover:text-white border border-white/5 text-xs font-semibold transition-all"
-            title="Copy video link"
+            title="نسخ الرابط والمشاركة"
           >
             {copied ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} />}
-            <span>{copied ? 'Copied!' : 'Share'}</span>
+            <span>{copied ? 'تم النسخ!' : 'مشاركة'}</span>
           </button>
+
+          {/* Like Count (if available) */}
+          {likes && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-full bg-[#141419] border border-white/5 text-xs text-void-300">
+              <ThumbsUp size={14} className="text-void-400" />
+              <span>{likes}</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Expandable Description Card */}
-      <div className="p-4 rounded-2xl bg-[#131318] border border-white/[0.05] flex flex-col gap-2">
+      <div className="p-4 rounded-2xl bg-[#131318] border border-white/[0.05] flex flex-col gap-2 text-right">
         {/* Stats Row */}
         <div className="flex items-center gap-4 text-xs font-semibold text-void-300 mb-1">
           {views && (
@@ -166,11 +180,19 @@ export default function VideoDetails({ videoData, videoId }) {
             onClick={() => setExpanded(!expanded)}
             className="self-start flex items-center gap-1 text-xs font-semibold text-neon-purple hover:text-purple-300 pt-1 transition-colors"
           >
-            <span>{expanded ? 'Show less' : 'Show more'}</span>
+            <span>{expanded ? 'عرض أقل' : 'عرض المزيد'}</span>
             {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         )}
       </div>
+
+      {/* Download Modal Dialog */}
+      <DownloadModal
+        videoData={videoData}
+        videoId={videoId}
+        isOpen={isDownloadOpen}
+        onClose={() => setIsDownloadOpen(false)}
+      />
     </div>
   );
 }

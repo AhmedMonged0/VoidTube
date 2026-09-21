@@ -7,6 +7,8 @@ import WatchPage from './pages/WatchPage';
 import BookmarksPage from './pages/BookmarksPage';
 import WatchLaterDrawer from './components/WatchLaterDrawer';
 import InstanceSelectorModal from './components/InstanceSelectorModal';
+import InstallAppBanner from './components/InstallAppBanner';
+import UpdateToast from './components/UpdateToast';
 import { Shield, Zap, Heart } from 'lucide-react';
 
 function AppContent() {
@@ -39,6 +41,8 @@ function AppContent() {
       {/* Slide-out Drawers & Dialogs */}
       <WatchLaterDrawer />
       <InstanceSelectorModal />
+      <InstallAppBanner />
+      <UpdateToast />
 
       {/* Minimalist Cinematic Footer */}
       <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16">

@@ -133,6 +133,18 @@ export default function Header() {
             )}
           </div>
 
+          {/* Install App Button */}
+          <button
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('voidtube-open-install-guide'));
+            }}
+            title="تثبيت التطبيق على الموبايل"
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-neon-purple/15 hover:bg-neon-purple/25 border border-neon-purple/30 text-xs text-neon-purple hover:text-white transition-all shadow-sm"
+          >
+            <span className="text-xs">📱</span>
+            <span className="font-semibold text-[11px] hidden md:inline">تثبيت التطبيق</span>
+          </button>
+
           {/* Active Instance Button */}
           <button
             onClick={() => setIsInstanceModalOpen(true)}
