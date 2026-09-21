@@ -1,17 +1,29 @@
 import React from 'react';
-import { Home, UtensilsCrossed, Bookmark, Smartphone, Download } from 'lucide-react';
+import { Home, UtensilsCrossed, Bookmark, Search } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-export default function MobileBottomNav({ onOpenApkModal }) {
-  const { nav, navigateToHome, watchLater, setIsWatchLaterOpen, setSelectedCategory } = useApp();
+export default function MobileBottomNav() {
+  const { nav, navigateToHome, watchLater, setIsWatchLaterOpen, setSelectedCategory, navigateToSearch } = useApp();
 
   const isHome = nav.page === 'home';
   const isCooking = nav.page === 'home' && nav.category === 'cooking';
+  const isSearch = nav.page === 'search';
 
   const handleCookingClick = () => {
     navigateToHome();
     if (typeof setSelectedCategory === 'function') {
       setSelectedCategory('cooking');
+    }
+  };
+
+  const handleSearchClick = () => {
+    // Scroll to top or trigger search
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const searchBtn = document.querySelector('header button[title="بحث"]');
+    if (searchBtn) {
+      searchBtn.click();
+    } else {
+      navigateToSearch('');
     }
   };
 
@@ -52,7 +64,22 @@ export default function MobileBottomNav({ onOpenApkModal }) {
           <span className="text-[10px] font-bold mt-0.5 tracking-tight">طبخ وأكلات</span>
         </button>
 
-        {/* 3. Watch Later Tab */}
+        {/* 3. Search Tab */}
+        <button
+          onClick={handleSearchClick}
+          className={`flex flex-col items-center justify-center py-1 px-3 rounded-2xl transition-all duration-200 ${
+            isSearch
+              ? 'text-neon-purple'
+              : 'text-void-400 hover:text-void-200'
+          }`}
+        >
+          <div className={`p-1 rounded-xl transition-all ${isSearch ? 'bg-neon-purple/15' : ''}`}>
+            <Search size={20} className={isSearch ? 'text-neon-purple' : ''} />
+          </div>
+          <span className="text-[10px] font-bold mt-0.5 tracking-tight">بحث</span>
+        </button>
+
+        {/* 4. Watch Later Tab */}
         <button
           onClick={() => setIsWatchLaterOpen(true)}
           className="flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-void-400 hover:text-void-200 transition-all duration-200 relative"
@@ -66,19 +93,6 @@ export default function MobileBottomNav({ onOpenApkModal }) {
             )}
           </div>
           <span className="text-[10px] font-bold mt-0.5 tracking-tight">المشاهدة لاحقاً</span>
-        </button>
-
-        {/* 4. APK Download Tab (Special Glowing Action) */}
-        <button
-          onClick={onOpenApkModal}
-          className="flex flex-col items-center justify-center py-1 px-3 rounded-2xl text-emerald-400 hover:text-emerald-300 transition-all duration-200 group"
-        >
-          <div className="p-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 group-hover:bg-emerald-500/20 group-hover:scale-105 transition-all shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-            <Smartphone size={20} className="text-emerald-400" />
-          </div>
-          <span className="text-[10px] font-black mt-0.5 text-emerald-400 flex items-center gap-0.5 tracking-tight">
-            تحميل APK
-          </span>
         </button>
 
       </div>

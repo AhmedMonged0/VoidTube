@@ -143,11 +143,11 @@ export default function Header({ onOpenApkModal }) {
                 <Search size={16} />
               </button>
 
-              {/* Direct APK Download Button */}
+              {/* Direct APK Download Button (Desktop only - for users downloading APK to their phone) */}
               <button
                 onClick={triggerApkModal}
                 title="تحميل تطبيق VoidTube للأندرويد (ملف APK)"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/15 to-neon-purple/20 hover:from-emerald-500/25 hover:to-neon-purple/30 border border-emerald-500/30 text-xs text-emerald-400 hover:text-white transition-all shadow-sm group"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/15 to-neon-purple/20 hover:from-emerald-500/25 hover:to-neon-purple/30 border border-emerald-500/30 text-xs text-emerald-400 hover:text-white transition-all shadow-sm group"
               >
                 <Smartphone size={14} className="text-emerald-400 group-hover:scale-110 transition-transform" />
                 <span className="font-bold text-[11px]">تحميل APK</span>
