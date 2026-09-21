@@ -1,23 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Flame, Sparkles, Plus, Loader2 } from 'lucide-react';
-import { useApp, REGIONS } from '../context/AppContext';
+import { Plus, Loader2 } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 import api from '../services/api';
 import VideoGrid from '../components/VideoGrid';
-import CategoryPills, { ARABIC_CATEGORIES } from '../components/CategoryPills';
+import { ARABIC_CATEGORIES } from '../components/CategoryPills';
 
 export default function HomePage() {
-  const { region } = useApp();
+  const { region, selectedCategory } = useApp();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
-  const [activeCategory, setActiveCategory] = useState('all');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
-  const currentRegionMeta = REGIONS.find(r => r.code === region) || REGIONS[0];
-
-  // Fetch initial videos
+  // Fetch videos for the currently selected category from Sidebar
   const fetchVideos = useCallback(async (catId = 'all', regionCode = region) => {
     setLoading(true);
     setError(null);
@@ -26,7 +23,6 @@ export default function HomePage() {
 
     try {
       if (catId === 'all') {
-        // Combined rich explore feed (trending + regional search, ~35-40 items)
         const data = await api.getExploreFeed({ region: regionCode, page: 1 });
         setVideos(Array.isArray(data) ? data : []);
       } else {
@@ -51,11 +47,11 @@ export default function HomePage() {
     const nextPage = page + 1;
     try {
       let newItems = [];
-      if (activeCategory === 'all') {
+      if (selectedCategory === 'all') {
         newItems = await api.getExploreFeed({ region, page: nextPage });
       } else {
-        const cat = ARABIC_CATEGORIES.find(c => c.id === activeCategory);
-        const query = cat ? cat.query : activeCategory;
+        const cat = ARABIC_CATEGORIES.find(c => c.id === selectedCategory);
+        const query = cat ? cat.query : selectedCategory;
         newItems = await api.searchVideos(query, 'video', nextPage);
       }
 
@@ -76,51 +72,34 @@ export default function HomePage() {
     }
   };
 
-  // Re-fetch on category or region change
+  // Re-fetch whenever selected category or region changes
   useEffect(() => {
-    fetchVideos(activeCategory, region);
-  }, [activeCategory, region, fetchVideos]);
+    fetchVideos(selectedCategory, region);
+  }, [selectedCategory, region, fetchVideos]);
 
-  const activeCategoryObj = ARABIC_CATEGORIES.find(c => c.id === activeCategory);
+  const activeCategoryObj = ARABIC_CATEGORIES.find(c => c.id === selectedCategory);
 
   return (
-    <div className="flex flex-col gap-6 py-6">
-      {/* Category Pills Header */}
-      <CategoryPills
-        activeCategory={activeCategory}
-        onSelectCategory={(catId) => setActiveCategory(catId)}
-      />
-
-      {/* Section Header */}
-      <div className="flex items-center justify-between pb-2 border-b border-white/[0.04]">
-        <div className="flex items-center gap-2.5">
-          <div className="p-2 rounded-xl bg-neon-purple/10 text-neon-purple border border-neon-purple/20">
-            <Flame size={18} />
-          </div>
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
-              <span>{activeCategoryObj ? activeCategoryObj.label : 'المحتوى الرائج'}</span>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-void-800 text-neon-purple border border-white/5 font-normal">
-                {currentRegionMeta.flag} {currentRegionMeta.name}
-              </span>
-            </h2>
-            <p className="text-xs text-void-400">
-              {videos.length > 0 ? `يعرض ${videos.length} فيديو بدون إعلانات أو تشتيت` : 'جلب أحدث الفيديوهات العربية من شبكة Invidious'}
-            </p>
-          </div>
+    <div className="flex flex-col gap-5 py-4 sm:py-6">
+      {/* Category header ONLY when filtered, otherwise clean video flow */}
+      {selectedCategory !== 'all' && (
+        <div className="flex items-center gap-2 pb-2 border-b border-white/[0.05]">
+          <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+            {activeCategoryObj?.label || 'القسم المختار'}
+          </h2>
         </div>
-      </div>
+      )}
 
       {/* Videos Grid */}
       <VideoGrid
         videos={videos}
         loading={loading}
         error={error}
-        onRetry={() => fetchVideos(activeCategory, region)}
+        onRetry={() => fetchVideos(selectedCategory, region)}
         emptyMessage="لم يتم العثور على فيديوهات حالياً في هذا القسم."
       />
 
-      {/* Load More Button (Loads 20+ more videos) */}
+      {/* Load More Button */}
       {!loading && videos.length > 0 && hasMore && (
         <div className="flex justify-center pt-4 pb-8">
           <button

@@ -11,6 +11,7 @@ import InstallAppBanner from './components/InstallAppBanner';
 import UpdateToast from './components/UpdateToast';
 import ApkDownloadModal from './components/ApkDownloadModal';
 import MobileBottomNav from './components/MobileBottomNav';
+import Sidebar from './components/Sidebar';
 import { Shield, Zap } from 'lucide-react';
 
 function AppContent() {
@@ -42,13 +43,19 @@ function AppContent() {
       {/* Sticky Top Header (Responsive Desktop & Mobile) */}
       <Header onOpenApkModal={() => setIsApkModalOpen(true)} />
 
-      {/* Main Page Container with bottom padding for mobile navigation bar */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 pb-24 md:pb-8">
-        {renderPage()}
-      </main>
+      {/* Main Container with Sidebar */}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-5 lg:px-8 flex gap-4 sm:gap-6 pb-24 md:pb-8">
+        {/* Sidebar Navigation */}
+        <Sidebar />
+
+        {/* Main Content Area */}
+        <main className="flex-1 min-w-0">
+          {renderPage()}
+        </main>
+      </div>
 
       {/* Mobile Sticky Bottom Navigation Bar (md:hidden) */}
-      <MobileBottomNav onOpenApkModal={() => setIsApkModalOpen(true)} />
+      <MobileBottomNav />
 
       {/* Slide-out Drawers & Modals */}
       <WatchLaterDrawer />

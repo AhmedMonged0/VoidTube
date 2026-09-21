@@ -68,6 +68,13 @@ export function AppProvider({ children }) {
   const [isWatchLaterOpen, setIsWatchLaterOpen] = useState(false);
   const [isInstanceModalOpen, setIsInstanceModalOpen] = useState(false);
 
+  // Category filter state
+  const [selectedCategory, setSelectedCategory] = useState('all');
+
+  // Sidebar toggle state (Default open on desktop)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
+
   // Active Invidious instance
   const [activeInstance, setActiveInstance] = useState(api.getCurrentInstance());
 
@@ -249,6 +256,11 @@ export function AppProvider({ children }) {
         addRecentSearch,
         removeRecentSearch,
         clearRecentSearches,
+        selectedCategory,
+        setSelectedCategory,
+        isSidebarOpen,
+        setIsSidebarOpen,
+        toggleSidebar,
       }}
     >
       {children}

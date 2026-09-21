@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Bookmark, Search, ArrowRight, X, Smartphone } from 'lucide-react';
+import { Play, Bookmark, Search, ArrowRight, X, Smartphone, Menu } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import SearchBar from './SearchBar';
 
@@ -9,7 +9,8 @@ export default function Header({ onOpenApkModal }) {
     navigateToHome,
     watchLater,
     setIsWatchLaterOpen,
-    navigateToSearch
+    navigateToSearch,
+    toggleSidebar
   } = useApp();
 
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
@@ -101,11 +102,19 @@ export default function Header({ onOpenApkModal }) {
              STANDARD HEADER (Desktop & Mobile Normal)
              ========================================= */
           <>
-            {/* Left: Brand Logo */}
-            <div className="flex items-center shrink-0">
+            {/* Left: Hamburger Menu & Brand Logo */}
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+              <button
+                onClick={toggleSidebar}
+                className="p-2 rounded-xl text-void-300 hover:text-white hover:bg-white/10 transition-colors active:scale-95"
+                title="القائمة الجانبية للأقسام"
+              >
+                <Menu size={20} />
+              </button>
+
               <button
                 onClick={navigateToHome}
-                className="flex items-center gap-2.5 group text-left focus:outline-none"
+                className="flex items-center gap-2 sm:gap-2.5 group text-left focus:outline-none"
               >
                 {/* Glowing Void Icon */}
                 <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-950 via-[#161426] to-[#251b3d] p-[1px] shadow-neon-purple group-hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] transition-all duration-300">
