@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark, X, Film, Flame, UtensilsCrossed, Mic, Trophy, Laugh, Camera, Lightbulb, Music, Gamepad2 } from 'lucide-react';
+import { Bookmark, X, Flame, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ARABIC_CATEGORIES } from './CategoryPills';
 
@@ -12,7 +12,9 @@ export default function Sidebar() {
     isSidebarOpen,
     setIsSidebarOpen,
     watchLater,
-    setIsWatchLaterOpen
+    setIsWatchLaterOpen,
+    downloads,
+    setIsDownloadsOpen
   } = useApp();
 
   const handleSelectCategory = (catId) => {
@@ -34,16 +36,21 @@ export default function Sidebar() {
     }
   };
 
+  const handleDownloadsClick = () => {
+    setIsDownloadsOpen(true);
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  };
+
   return (
     <>
       {/* =========================================================
-          1. DESKTOP SIDEBAR (Sticky on Right in RTL Layout)
+          1. DESKTOP SIDEBAR (Only visible when isSidebarOpen is true)
          ========================================================= */}
-      {nav.page !== 'watch' && (
+      {nav.page !== 'watch' && isSidebarOpen && (
         <aside 
-          className={`hidden lg:flex flex-col shrink-0 sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar py-2 transition-all duration-300 ${
-            isSidebarOpen ? 'w-56 pr-2' : 'w-16 items-center px-1'
-          }`}
+          className="hidden lg:flex flex-col shrink-0 sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar py-2 transition-all duration-300 w-56 pr-2 animate-fade-in"
           dir="rtl"
         >
           <div className="flex flex-col space-y-1 w-full">
@@ -60,43 +67,56 @@ export default function Sidebar() {
                     isActive
                       ? 'bg-neon-purple/20 text-white font-bold border border-neon-purple/40 shadow-neon-purple'
                       : 'text-void-300 hover:text-white hover:bg-white/[0.06] font-medium'
-                  } ${!isSidebarOpen ? 'justify-center px-0' : ''}`}
+                  }`}
                 >
                   <div className={`p-1.5 rounded-xl transition-all ${
                     isActive ? 'bg-neon-purple text-white' : 'text-void-400 group-hover:text-neon-purple'
                   }`}>
                     <Icon size={18} />
                   </div>
-                  {isSidebarOpen && (
-                    <span className="truncate tracking-tight">{cat.label}</span>
-                  )}
+                  <span className="truncate tracking-tight">{cat.label}</span>
                 </button>
               );
             })}
 
             <div className="border-t border-white/[0.08] my-3 pt-2" />
 
+            {/* Offline Downloads Quick Access */}
+            <button
+              onClick={handleDownloadsClick}
+              title="التنزيلات والفيديوهات المحفوظة"
+              className="flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-xs transition-all duration-200 group w-full text-right text-void-300 hover:text-white hover:bg-white/[0.06] font-medium"
+            >
+              <div className="p-1.5 rounded-xl text-void-400 group-hover:text-emerald-400">
+                <Download size={18} />
+              </div>
+              <div className="flex items-center justify-between flex-1 truncate">
+                <span className="truncate">التنزيلات المحفوظة</span>
+                {downloads && downloads.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold">
+                    {downloads.length}
+                  </span>
+                )}
+              </div>
+            </button>
+
             {/* Watch Later Quick Access */}
             <button
               onClick={handleWatchLaterClick}
               title="المشاهدة لاحقاً"
-              className={`flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-xs transition-all duration-200 group w-full text-right text-void-300 hover:text-white hover:bg-white/[0.06] font-medium ${
-                !isSidebarOpen ? 'justify-center px-0' : ''
-              }`}
+              className="flex items-center gap-3.5 px-3 py-2.5 rounded-2xl text-xs transition-all duration-200 group w-full text-right text-void-300 hover:text-white hover:bg-white/[0.06] font-medium"
             >
               <div className="p-1.5 rounded-xl text-void-400 group-hover:text-neon-purple">
                 <Bookmark size={18} />
               </div>
-              {isSidebarOpen && (
-                <div className="flex items-center justify-between flex-1 truncate">
-                  <span className="truncate">المشاهدة لاحقاً</span>
-                  {watchLater.length > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-neon-purple/20 text-neon-purple border border-neon-purple/30 text-[10px] font-bold">
-                      {watchLater.length}
-                    </span>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center justify-between flex-1 truncate">
+                <span className="truncate">المشاهدة لاحقاً</span>
+                {watchLater && watchLater.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-neon-purple/20 text-neon-purple border border-neon-purple/30 text-[10px] font-bold">
+                    {watchLater.length}
+                  </span>
+                )}
+              </div>
             </button>
           </div>
         </aside>
@@ -127,6 +147,7 @@ export default function Sidebar() {
               <button
                 onClick={() => setIsSidebarOpen(false)}
                 className="p-1.5 rounded-full text-void-400 hover:text-white hover:bg-white/10 transition-colors"
+                title="إغلاق"
               >
                 <X size={18} />
               </button>
@@ -142,7 +163,7 @@ export default function Sidebar() {
                   <button
                     key={cat.id}
                     onClick={() => handleSelectCategory(cat.id)}
-                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl text-xs transition-all w-full text-right ${
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl text-xs transition-all w-full text-right ${
                       isActive
                         ? 'bg-neon-purple text-white font-bold shadow-neon-purple'
                         : 'text-void-200 hover:bg-white/5'
@@ -156,15 +177,32 @@ export default function Sidebar() {
 
               <div className="border-t border-white/10 my-3 pt-2" />
 
+              {/* Downloads in Mobile Drawer */}
+              <button
+                onClick={handleDownloadsClick}
+                className="flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs text-void-200 hover:bg-white/5 w-full text-right"
+              >
+                <div className="flex items-center gap-3">
+                  <Download size={18} className="text-emerald-400" />
+                  <span className="font-medium text-sm">التنزيلات المحفوظة</span>
+                </div>
+                {downloads && downloads.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-xs border border-emerald-500/30">
+                    {downloads.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Watch Later in Mobile Drawer */}
               <button
                 onClick={handleWatchLaterClick}
-                className="flex items-center justify-between px-3 py-3 rounded-2xl text-xs text-void-200 hover:bg-white/5 w-full text-right"
+                className="flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs text-void-200 hover:bg-white/5 w-full text-right"
               >
                 <div className="flex items-center gap-3">
                   <Bookmark size={18} className="text-neon-purple" />
                   <span className="font-medium text-sm">المشاهدة لاحقاً</span>
                 </div>
-                {watchLater.length > 0 && (
+                {watchLater && watchLater.length > 0 && (
                   <span className="px-2 py-0.5 rounded-full bg-neon-purple text-white font-bold text-xs">
                     {watchLater.length}
                   </span>

@@ -17,7 +17,7 @@ import { formatViews, formatTimeAgo } from '../../utils/formatters';
 import DownloadModal from './DownloadModal';
 
 export default function VideoDetails({ videoData, videoId }) {
-  const { isWatchLater, toggleWatchLater, navigateToSearch } = useApp();
+  const { isWatchLater, toggleWatchLater, navigateToSearch, openDownloadModal, isVideoDownloaded } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isDownloadOpen, setIsDownloadOpen] = useState(false);
@@ -103,12 +103,25 @@ export default function VideoDetails({ videoData, videoId }) {
         <div className="flex items-center gap-2">
           {/* Download Button */}
           <button
-            onClick={() => setIsDownloadOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-neon-purple/20 hover:bg-neon-purple text-neon-purple hover:text-white border border-neon-purple/30 text-xs font-semibold shadow-sm transition-all"
-            title="تنزيل الفيديو بجودة عالية أو صوت فقط"
+            onClick={() => {
+              if (typeof openDownloadModal === 'function') {
+                openDownloadModal({
+                  ...videoData,
+                  videoId
+                });
+              } else {
+                setIsDownloadOpen(true);
+              }
+            }}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-sm transition-all active:scale-95 ${
+              isVideoDownloaded?.(videoId)
+                ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
+            }`}
+            title="تنزيل الفيديو وحفظه على الهاتف وتطبيق VoidTube"
           >
-            <Download size={14} />
-            <span>تنزيل</span>
+            {isVideoDownloaded?.(videoId) ? <Check size={14} className="text-emerald-400" /> : <Download size={14} />}
+            <span>{isVideoDownloaded?.(videoId) ? 'تم التنزيل' : 'تنزيل'}</span>
           </button>
 
           {/* Bookmark (Watch Later) Button */}

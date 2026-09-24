@@ -9,6 +9,7 @@ const STORAGE_KEYS = {
   HISTORY: 'voidtube_history_v1',
   REGION: 'voidtube_region_v1',
   RECENT_SEARCHES: 'voidtube_recent_searches_v1',
+  DOWNLOADS: 'voidtube_offline_downloads_v1',
 };
 
 export const REGIONS = [
@@ -71,9 +72,57 @@ export function AppProvider({ children }) {
   // Category filter state
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  // Sidebar toggle state (Default open on desktop)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Sidebar toggle state (Default closed so page opens cleanly without sidebar popup)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
+
+  // Offline / In-App Saved Downloads
+  const [downloads, setDownloads] = useState(() => safeGetStorage(STORAGE_KEYS.DOWNLOADS));
+  const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
+  const [downloadModalVideo, setDownloadModalVideo] = useState(null);
+
+  const openDownloadModal = useCallback((video) => {
+    if (!video) return;
+    setDownloadModalVideo(video);
+  }, []);
+
+  const closeDownloadModal = useCallback(() => {
+    setDownloadModalVideo(null);
+  }, []);
+
+  const addDownload = useCallback((item) => {
+    if (!item || !item.videoId) return;
+    setDownloads(prev => {
+      const filtered = prev.filter(v => v.videoId !== item.videoId);
+      const updated = [
+        {
+          ...item,
+          savedAt: Date.now(),
+        },
+        ...filtered
+      ];
+      safeSetStorage(STORAGE_KEYS.DOWNLOADS, updated);
+      return updated;
+    });
+  }, []);
+
+  const removeDownload = useCallback((videoId) => {
+    setDownloads(prev => {
+      const updated = prev.filter(v => v.videoId !== videoId);
+      safeSetStorage(STORAGE_KEYS.DOWNLOADS, updated);
+      return updated;
+    });
+  }, []);
+
+  const clearAllDownloads = useCallback(() => {
+    setDownloads([]);
+    safeSetStorage(STORAGE_KEYS.DOWNLOADS, []);
+  }, []);
+
+  const isVideoDownloaded = useCallback((videoId) => {
+    if (!videoId) return false;
+    return downloads.some(v => v.videoId === videoId);
+  }, [downloads]);
 
   // Active Invidious instance
   const [activeInstance, setActiveInstance] = useState(api.getCurrentInstance());
@@ -150,7 +199,7 @@ export function AppProvider({ children }) {
   const navigateToWatch = useCallback((videoId, videoData = null) => {
     if (!videoId) return;
     window.history.pushState({}, '', `?v=${videoId}`);
-    setNav({ page: 'watch', videoId, query: '' });
+    setNav({ page: 'watch', videoId, query: '', videoData });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (videoData) {
@@ -261,6 +310,16 @@ export function AppProvider({ children }) {
         isSidebarOpen,
         setIsSidebarOpen,
         toggleSidebar,
+        downloads,
+        isDownloadsOpen,
+        setIsDownloadsOpen,
+        addDownload,
+        removeDownload,
+        clearAllDownloads,
+        isVideoDownloaded,
+        downloadModalVideo,
+        openDownloadModal,
+        closeDownloadModal,
       }}
     >
       {children}

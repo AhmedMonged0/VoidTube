@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Bookmark, Search, ArrowRight, X, Smartphone, Menu } from 'lucide-react';
+import { Play, Bookmark, Search, ArrowRight, X, Smartphone, Menu, Download } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import SearchBar from './SearchBar';
 
@@ -9,6 +9,8 @@ export default function Header({ onOpenApkModal }) {
     navigateToHome,
     watchLater,
     setIsWatchLaterOpen,
+    downloads,
+    setIsDownloadsOpen,
     navigateToSearch,
     toggleSidebar
   } = useApp();
@@ -160,6 +162,28 @@ export default function Header({ onOpenApkModal }) {
               >
                 <Smartphone size={14} className="text-emerald-400 group-hover:scale-110 transition-transform" />
                 <span className="font-bold text-[11px]">تحميل APK</span>
+              </button>
+
+              {/* Downloads Button (Desktop & Tablet) */}
+              <button
+                onClick={() => setIsDownloadsOpen(true)}
+                className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#141419] hover:bg-[#1a1a24] border border-white/10 text-void-200 hover:text-white transition-all duration-150 group"
+                title="التنزيلات المحفوظة"
+              >
+                <Download
+                  size={15}
+                  className={`transition-colors ${
+                    downloads && downloads.length > 0 ? 'text-emerald-400' : 'text-void-400 group-hover:text-emerald-400'
+                  }`}
+                />
+                <span className="hidden sm:inline text-xs font-semibold">
+                  التنزيلات
+                </span>
+                {downloads && downloads.length > 0 && (
+                  <span className="flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-emerald-500 text-[10px] font-bold text-white shadow-sm">
+                    {downloads.length}
+                  </span>
+                )}
               </button>
 
               {/* Watch Later / Bookmarks Button */}

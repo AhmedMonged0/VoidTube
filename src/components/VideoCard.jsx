@@ -22,13 +22,14 @@ function getAvatarGradient(name = '') {
 }
 
 export default function VideoCard({ video, priority = false }) {
-  const { navigateToWatch, toggleWatchLater, isWatchLater } = useApp();
+  const { navigateToWatch, toggleWatchLater, isWatchLater, openDownloadModal, isVideoDownloaded } = useApp();
   const [imgError, setImgError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   const videoId = video.videoId || video.id;
   const bookmarked = isWatchLater(videoId);
+  const downloaded = isVideoDownloaded ? isVideoDownloaded(videoId) : false;
 
   // High-reliability thumbnail
   const defaultThumb = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
@@ -60,11 +61,11 @@ export default function VideoCard({ video, priority = false }) {
 
   const handleDirectDownload = (e) => {
     e.stopPropagation();
-    // Navigate to watch page with auto download trigger
-    navigateToWatch(videoId, video);
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('voidtube-open-download-modal'));
-    }, 400);
+    if (typeof openDownloadModal === 'function') {
+      openDownloadModal(video);
+    } else {
+      navigateToWatch(videoId, video);
+    }
   };
 
   return (
@@ -170,10 +171,14 @@ export default function VideoCard({ video, priority = false }) {
           <button
             type="button"
             onClick={handleDirectDownload}
-            className="p-1.5 sm:p-2 rounded-xl text-void-400 hover:text-neon-purple hover:bg-neon-purple/10 active:scale-95 transition-all"
-            title="تحميل الفيديو بصيغ متعددة"
+            className={`p-1.5 sm:p-2 rounded-xl transition-all active:scale-95 ${
+              downloaded
+                ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
+                : 'text-void-400 hover:text-emerald-400 hover:bg-emerald-500/10'
+            }`}
+            title={downloaded ? "تم تنزيل هذا الفيديو - اضغط لتنزيل نسخة أخرى أو إدارته" : "تنزيل الفيديو على الهاتف وتطبيق VoidTube"}
           >
-            <Download size={16} />
+            {downloaded ? <Check size={16} className="text-emerald-400" /> : <Download size={16} />}
           </button>
         </div>
 

@@ -10,8 +10,8 @@ export default function WatchPage() {
   const { nav, navigateToWatch } = useApp();
   const videoId = nav.videoId;
 
-  const [videoData, setVideoData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [videoData, setVideoData] = useState(() => nav.videoData || null);
+  const [loading, setLoading] = useState(!nav.videoData);
   const [error, setError] = useState(null);
   const [isTheater, setIsTheater] = useState(false);
 
@@ -19,7 +19,7 @@ export default function WatchPage() {
     if (!videoId) return;
 
     let isMounted = true;
-    setLoading(true);
+    if (!videoData) setLoading(true);
     setError(null);
 
     api.getVideoDetails(videoId)
@@ -35,9 +35,18 @@ export default function WatchPage() {
       })
       .catch((err) => {
         if (isMounted) {
-          console.error('Watch fetch error:', err);
-          setError(err.message || 'Failed to load video details');
+          console.warn('Watch fetch upstream error, using fallback:', err);
+          const fallbackData = nav.videoData || {
+            videoId,
+            title: 'فيديو يوتيوب',
+            author: 'قناة يوتيوب',
+            lengthSeconds: 0,
+            viewCount: 0,
+            publishedText: 'متاح الآن'
+          };
+          setVideoData(prev => prev || fallbackData);
           setLoading(false);
+          setError(null);
         }
       });
 

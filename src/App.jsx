@@ -6,16 +6,18 @@ import SearchPage from './pages/SearchPage';
 import WatchPage from './pages/WatchPage';
 import BookmarksPage from './pages/BookmarksPage';
 import WatchLaterDrawer from './components/WatchLaterDrawer';
+import DownloadsDrawer from './components/DownloadsDrawer';
 import InstanceSelectorModal from './components/InstanceSelectorModal';
 import InstallAppBanner from './components/InstallAppBanner';
 import UpdateToast from './components/UpdateToast';
 import ApkDownloadModal from './components/ApkDownloadModal';
+import DownloadModal from './components/Player/DownloadModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import Sidebar from './components/Sidebar';
 import { Shield, Zap } from 'lucide-react';
 
 function AppContent() {
-  const { nav } = useApp();
+  const { nav, downloadModalVideo, closeDownloadModal } = useApp();
   const [isApkModalOpen, setIsApkModalOpen] = useState(false);
 
   useEffect(() => {
@@ -59,10 +61,19 @@ function AppContent() {
 
       {/* Slide-out Drawers & Modals */}
       <WatchLaterDrawer />
+      <DownloadsDrawer />
       <InstanceSelectorModal />
       <InstallAppBanner onOpenApkModal={() => setIsApkModalOpen(true)} />
       <UpdateToast />
       <ApkDownloadModal isOpen={isApkModalOpen} onClose={() => setIsApkModalOpen(false)} />
+      {downloadModalVideo && (
+        <DownloadModal
+          videoData={downloadModalVideo}
+          videoId={downloadModalVideo.videoId || downloadModalVideo.id}
+          isOpen={!!downloadModalVideo}
+          onClose={closeDownloadModal}
+        />
+      )}
 
       {/* Minimalist Cinematic Footer (Desktop view) */}
       <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16 hidden md:block">
