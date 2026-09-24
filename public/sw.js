@@ -26,8 +26,16 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Let Invidious API and video stream requests pass through network directly
-  if (event.request.url.includes('/api/') || event.request.url.includes('googlevideo.com') || event.request.url.includes('ytimg.com')) {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') return;
+
+  // NEVER intercept cross-origin requests or API endpoints in Service Worker
+  try {
+    const url = new URL(event.request.url);
+    if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) {
+      return; // Pass through directly to network without touching
+    }
+  } catch (e) {
     return;
   }
 

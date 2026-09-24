@@ -176,28 +176,79 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
       }, 500);
     };
 
-    // Execute direct In-App download via Loader.to API
+    // Multi-tier CORS-safe download fetcher (Vercel Serverless API -> CORS Proxies -> Direct)
+    const fetchApiSafe = async (action, extraParams = {}) => {
+      const endpoints = [
+        // 1. Same-origin Vercel / Vite Serverless API (Zero CORS, 100% reliable on Vercel and Localhost)
+        () => {
+          const qs = new URLSearchParams({ action, ...extraParams }).toString();
+          return `/api/download?${qs}`;
+        },
+        // 2. CORS Proxy 1 (corsproxy.io)
+        () => {
+          if (action === 'init') {
+            const raw = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${extraParams.format || '720'}&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${extraParams.videoId}`)}`;
+            return `https://corsproxy.io/?url=${encodeURIComponent(raw)}`;
+          } else {
+            return `https://corsproxy.io/?url=${encodeURIComponent(extraParams.url)}`;
+          }
+        },
+        // 3. CORS Proxy 2 (allorigins.win)
+        () => {
+          if (action === 'init') {
+            const raw = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${extraParams.format || '720'}&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${extraParams.videoId}`)}`;
+            return `https://api.allorigins.win/raw?url=${encodeURIComponent(raw)}`;
+          } else {
+            return `https://api.allorigins.win/raw?url=${encodeURIComponent(extraParams.url)}`;
+          }
+        },
+        // 4. Direct call
+        () => {
+          if (action === 'init') {
+            return `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${extraParams.format || '720'}&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${extraParams.videoId}`)}`;
+          } else {
+            return extraParams.url;
+          }
+        }
+      ];
+
+      for (const getUrl of endpoints) {
+        try {
+          const targetUrl = getUrl();
+          const r = await fetch(targetUrl, { signal: abortCtrlRef.current?.signal });
+          if (r.ok) {
+            const d = await r.json();
+            if (d && (d.progress_url || d.download_url || d.id || d.success !== undefined)) {
+              return d;
+            }
+          }
+        } catch (_) {
+          // Continue to next fallback endpoint
+        }
+      }
+      return null;
+    };
+
+    // Execute direct In-App download via robust multi-tier API
     try {
       abortCtrlRef.current = new AbortController();
-      const apiUrl = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${apiFormat}&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`;
-      const res = await fetch(apiUrl, { signal: abortCtrlRef.current.signal });
+      const initData = await fetchApiSafe('init', { videoId, format: apiFormat });
 
-      if (res.ok) {
-        const initData = await res.json();
+      if (initData) {
         if (initData.download_url) {
           finishDownload(initData.download_url);
           return;
         }
 
-        if (initData.progress_url) {
-          // Poll progress_url every 1.1s (up to 30 attempts ~33s)
+        if (initData.progress_url || initData.id) {
+          const pollUrl = initData.progress_url || `https://lto2.affadaffa.com/api/progress?id=${initData.id}`;
+          // Poll progress every 1.1s (up to 30 attempts ~33s)
           for (let i = 0; i < 30; i++) {
             if (isCompleted) break;
             await new Promise(r => setTimeout(r, 1100));
             try {
-              const pRes = await fetch(initData.progress_url, { signal: abortCtrlRef.current?.signal });
-              if (pRes.ok) {
-                const pData = await pRes.json();
+              const pData = await fetchApiSafe('progress', { url: pollUrl });
+              if (pData) {
                 if (pData.progress && pData.progress > 0) {
                   const pct = Math.min(95, Math.max(30, Math.floor(pData.progress / 10)));
                   setProgress(pct);

@@ -69,6 +69,61 @@ function downloadProxyPlugin() {
           }
         }
       });
+
+      server.middlewares.use('/api/download', async (req, res) => {
+        try {
+          const reqUrl = new URL(req.url, 'http://localhost:5173');
+          const action = reqUrl.searchParams.get('action');
+          const videoId = reqUrl.searchParams.get('videoId');
+          const format = reqUrl.searchParams.get('format') || '720';
+          const targetUrl = reqUrl.searchParams.get('url');
+
+          const fetchJsonHelper = (urlToFetch) => {
+            return new Promise((resolve, reject) => {
+              const parsed = new URL(urlToFetch);
+              const client = parsed.protocol === 'https:' ? https : http;
+              const r = client.get(urlToFetch, {
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                  'Accept': 'application/json, text/plain, */*'
+                }
+              }, (response) => {
+                let d = '';
+                response.on('data', chunk => d += chunk);
+                response.on('end', () => {
+                  try { resolve(JSON.parse(d)); } catch(e) { resolve({ error: 'Failed to parse JSON', raw: d }); }
+                });
+              });
+              r.on('error', reject);
+              r.setTimeout(12000, () => { r.destroy(); reject(new Error('Timeout')); });
+            });
+          };
+
+          if (action === 'init' && videoId) {
+            const ytUrl = `https://www.youtube.com/watch?v=${videoId}`;
+            const apiUrl = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${format}&url=${encodeURIComponent(ytUrl)}`;
+            const data = await fetchJsonHelper(apiUrl);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(data));
+            return;
+          }
+
+          if (action === 'progress' && targetUrl) {
+            const data = await fetchJsonHelper(targetUrl);
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(data));
+            return;
+          }
+
+          res.statusCode = 400;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: 'Invalid parameters' }));
+        } catch (err) {
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
     }
   };
 }
