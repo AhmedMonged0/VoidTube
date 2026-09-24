@@ -3,19 +3,19 @@
  */
 export const INVIDIOUS_INSTANCES = [
   {
-    name: 'Flokinet',
-    url: 'https://invidious.flokinet.to',
-    cors: true,
-    region: 'IS',
-    flag: '🇮🇸',
-    isHealthy: true
-  },
-  {
     name: 'F5.si',
     url: 'https://invidious.f5.si',
     cors: true,
     region: 'JP',
     flag: '🇯🇵',
+    isHealthy: true
+  },
+  {
+    name: 'Flokinet',
+    url: 'https://invidious.flokinet.to',
+    cors: true,
+    region: 'IS',
+    flag: '🇮🇸',
     isHealthy: true
   },
   {
@@ -29,30 +29,6 @@ export const INVIDIOUS_INSTANCES = [
   {
     name: 'NerdVPN',
     url: 'https://invidious.nerdvpn.de',
-    cors: false,
-    region: 'DE',
-    flag: '🇩🇪',
-    isHealthy: true
-  },
-  {
-    name: 'Yewtu.be',
-    url: 'https://yewtu.be',
-    cors: true,
-    region: 'DE',
-    flag: '🇩🇪',
-    isHealthy: true
-  },
-  {
-    name: 'DRGNS Space',
-    url: 'https://invidious.drgns.space',
-    cors: true,
-    region: 'US',
-    flag: '🇺🇸',
-    isHealthy: true
-  },
-  {
-    name: 'Tiekoetter',
-    url: 'https://invidious.tiekoetter.com',
     cors: false,
     region: 'DE',
     flag: '🇩🇪',

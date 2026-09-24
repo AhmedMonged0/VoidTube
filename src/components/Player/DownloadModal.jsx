@@ -61,19 +61,27 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
     return `[VoidTube] ${safeTitle} (${res}).mp4`;
   };
 
+  const saveFromUrl = `https://en.savefrom.net/1-youtube-video-downloader-360/?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D${videoId}`;
+  const ssYouTubeUrl = `https://ssyoutube.com/watch?v=${videoId}`;
+  const y2mateUrl = `https://www.y2mate.com/youtube/${videoId}`;
+
   const triggerDeviceDownload = (url, filename) => {
     try {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      if (url && (url.includes('.googlevideo.com') || url.includes('.mp4') || url.includes('savenow.to'))) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } else if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } catch (e) {
       console.warn('Direct file download fallback triggered:', e);
-      window.open(url, '_blank');
+      if (url) window.open(url, '_blank');
     }
   };
 
@@ -87,17 +95,17 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
       qualityLabel = '720p HD';
       targetSize = 28.6;
       filename = cleanFilename(title, '720p HD');
-      streamUrl = hdStream?.url || `https://yewtu.be/latest_version?id=${videoId}&itag=22`;
+      streamUrl = hdStream?.url || saveFromUrl;
     } else if (formatType === '360p') {
       qualityLabel = '360p MP4';
       targetSize = 12.4;
       filename = cleanFilename(title, '360p');
-      streamUrl = sdStream?.url || `https://yewtu.be/latest_version?id=${videoId}&itag=18`;
+      streamUrl = sdStream?.url || ssYouTubeUrl;
     } else {
-      qualityLabel = 'Audio M4A';
+      qualityLabel = 'Audio M4A / MP3';
       targetSize = 4.2;
-      filename = cleanFilename(title, 'Audio').replace('.mp4', '.m4a');
-      streamUrl = audioStream?.url || `https://yewtu.be/latest_version?id=${videoId}&itag=140`;
+      filename = cleanFilename(title, 'Audio').replace('.mp4', '.mp3');
+      streamUrl = audioStream?.url || y2mateUrl;
     }
 
     setSelectedFormat({
@@ -105,7 +113,10 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
       label: qualityLabel,
       url: streamUrl,
       filename,
-      size: `${targetSize} MB`
+      size: `${targetSize} MB`,
+      saveFromUrl,
+      ssYouTubeUrl,
+      y2mateUrl
     });
 
     setTotalMb(targetSize.toFixed(1));
@@ -477,35 +488,56 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
               </span>
             </div>
 
-            {/* Action Buttons */}
-            <div className="w-full flex flex-col sm:flex-row gap-2.5 pt-2">
-              <button
-                onClick={handleOpenInDownloads}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all active:scale-95"
+            {/* Direct Phone Download Actions */}
+            <div className="w-full flex flex-col gap-2 pt-1">
+              <a
+                href={selectedFormat?.saveFromUrl || `https://en.savefrom.net/1-youtube-video-downloader-360/?url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3D${videoId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all active:scale-95 text-center"
               >
-                <FolderDown size={16} />
-                <span>مشاهدة في قائمة التنزيلات</span>
-              </button>
+                <Download size={16} />
+                <span>حفظ ملف MP4 على الهاتف (سيرفر مباشر 1)</span>
+              </a>
 
-              <button
-                onClick={() => {
-                  if (selectedFormat?.url && selectedFormat?.filename) {
-                    triggerDeviceDownload(selectedFormat.url, selectedFormat.filename);
-                  }
-                }}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl bg-void-800 hover:bg-void-750 text-void-200 hover:text-white text-xs font-semibold border border-white/10 transition-all"
-                title="تنزيل نسخة إضافية للهاتف"
-              >
-                <RotateCw size={14} />
-                <span>تنزيل نسخة للهاتف</span>
-              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={selectedFormat?.ssYouTubeUrl || `https://ssyoutube.com/watch?v=${videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl bg-void-800 hover:bg-void-750 text-void-200 hover:text-white text-xs font-semibold border border-white/10 transition-all text-center"
+                >
+                  <Zap size={13} className="text-yellow-400" />
+                  <span>سيرفر تحميل 2</span>
+                </a>
 
-              <button
-                onClick={onClose}
-                className="px-4 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-void-300 hover:text-white text-xs font-semibold transition-all"
-              >
-                إغلاق
-              </button>
+                <a
+                  href={selectedFormat?.y2mateUrl || `https://www.y2mate.com/youtube/${videoId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-2xl bg-void-800 hover:bg-void-750 text-void-200 hover:text-white text-xs font-semibold border border-white/10 transition-all text-center"
+                >
+                  <Music size={13} className="text-blue-400" />
+                  <span>تحميل صوت MP3</span>
+                </a>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  onClick={handleOpenInDownloads}
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-neon-purple/20 hover:bg-neon-purple text-neon-purple hover:text-white border border-neon-purple/30 text-xs font-bold transition-all"
+                >
+                  <FolderDown size={16} />
+                  <span>مشاهدة في قائمة التنزيلات</span>
+                </button>
+
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-void-300 hover:text-white text-xs font-semibold transition-all"
+                >
+                  إغلاق
+                </button>
+              </div>
             </div>
 
           </div>

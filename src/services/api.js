@@ -70,7 +70,7 @@ class InvidiousApiService {
       const url = `${base}${fullEndpoint}`;
       try {
         const controller = new AbortController();
-        const timeoutMs = options.timeoutMs || 6500;
+        const timeoutMs = options.timeoutMs || 3500;
         const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         const res = await fetch(url, {
@@ -230,7 +230,44 @@ class InvidiousApiService {
    */
   async getVideoDetails(videoId) {
     if (!videoId) throw new Error('Video ID is required');
-    return this.fetchWithFallback(`/api/v1/videos/${videoId}`, { hl: 'ar', region: 'EG' });
+    try {
+      return await this.fetchWithFallback(`/api/v1/videos/${videoId}`, { hl: 'ar', region: 'EG' }, { timeoutMs: 3000 });
+    } catch (err) {
+      console.warn('[VoidTube] Invidious getVideoDetails failed, using NoEmbed fallback:', err);
+      try {
+        const res = await fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`, {
+          signal: AbortSignal.timeout(2000)
+        });
+        if (res.ok) {
+          const info = await res.json();
+          return {
+            videoId,
+            title: info.title || 'فيديو يوتيوب',
+            author: info.author_name || 'قناة يوتيوب',
+            authorUrl: info.author_url || '',
+            lengthSeconds: 0,
+            viewCount: 0,
+            publishedText: 'متاح الآن',
+            videoThumbnails: [
+              { url: `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`, quality: 'maxres' },
+              { url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, quality: 'high' }
+            ],
+            recommendedVideos: []
+          };
+        }
+      } catch (e2) {
+        console.warn('[VoidTube] NoEmbed fallback failed:', e2);
+      }
+      return {
+        videoId,
+        title: 'فيديو يوتيوب',
+        author: 'قناة يوتيوب',
+        videoThumbnails: [
+          { url: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`, quality: 'high' }
+        ],
+        recommendedVideos: []
+      };
+    }
   }
 
   /**

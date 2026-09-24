@@ -14,7 +14,10 @@ export default function WatchPage() {
   const [loading, setLoading] = useState(!nav.videoData);
   const [error, setError] = useState(null);
   const [isTheater, setIsTheater] = useState(false);
+  const [relatedVideos, setRelatedVideos] = useState([]);
+  const [relatedLoading, setRelatedLoading] = useState(true);
 
+  // Fetch video details
   useEffect(() => {
     if (!videoId) return;
 
@@ -27,7 +30,6 @@ export default function WatchPage() {
         if (isMounted) {
           setVideoData(data);
           setLoading(false);
-          // Set page title to video title
           if (data?.title) {
             document.title = `${data.title} — VoidTube`;
           }
@@ -55,6 +57,59 @@ export default function WatchPage() {
       document.title = 'VoidTube — Cinematic Distraction-Free Streaming';
     };
   }, [videoId]);
+
+  // Fetch related videos dynamically so they ALWAYS show
+  useEffect(() => {
+    if (!videoId) return;
+
+    let isMounted = true;
+    setRelatedLoading(true);
+
+    const loadRelated = async () => {
+      // 1. If videoData already has recommendations, use them
+      if (videoData?.recommendedVideos?.length > 0) {
+        if (isMounted) {
+          setRelatedVideos(videoData.recommendedVideos);
+          setRelatedLoading(false);
+        }
+        return;
+      }
+
+      // 2. Otherwise search by author or title
+      const query = videoData?.author || nav.videoData?.author || videoData?.title || nav.videoData?.title || 'تريند مصر';
+      try {
+        const searchResults = await api.searchVideos(query, 'video', 1);
+        if (isMounted) {
+          const filtered = (searchResults || []).filter(v => (v.videoId || v.id) !== videoId);
+          if (filtered.length > 0) {
+            setRelatedVideos(filtered);
+            setRelatedLoading(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn('Related search failed, trying explore feed:', err);
+      }
+
+      // 3. Fallback to explore feed
+      try {
+        const fallbackFeed = await api.getExploreFeed();
+        if (isMounted) {
+          const filtered = (fallbackFeed || []).filter(v => (v.videoId || v.id) !== videoId);
+          setRelatedVideos(filtered);
+          setRelatedLoading(false);
+        }
+      } catch (err2) {
+        if (isMounted) setRelatedLoading(false);
+      }
+    };
+
+    loadRelated();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [videoId, videoData?.author, videoData?.title, videoData?.recommendedVideos]);
 
   const handleRetry = () => {
     if (!videoId) return;
@@ -126,10 +181,10 @@ export default function WatchPage() {
           <div className="flex flex-col gap-3">
             <h3 className="text-sm font-bold text-void-200 tracking-wide flex items-center gap-2 px-1">
               <Sparkles size={14} className="text-neon-purple" />
-              Related Videos
+              <span>فيديوهات مقترحة وذات صلة</span>
             </h3>
 
-            {loading ? (
+            {relatedLoading && relatedVideos.length === 0 ? (
               <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="flex gap-3 p-2 rounded-xl bg-[#141419] border border-white/[0.03] animate-pulse">
@@ -142,13 +197,13 @@ export default function WatchPage() {
                   </div>
                 ))}
               </div>
-            ) : recommended.length === 0 ? (
+            ) : relatedVideos.length === 0 ? (
               <div className="p-4 rounded-xl bg-[#141419] border border-white/5 text-xs text-void-400 text-center">
-                No recommended videos returned for this video.
+                لا توجد فيديوهات مقترحة إضافية حالياً.
               </div>
             ) : (
               <div className={`space-y-2.5 ${isTheater ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 space-y-0' : ''}`}>
-                {recommended.slice(0, 15).map((rec, idx) => {
+                {relatedVideos.slice(0, 15).map((rec, idx) => {
                   const recId = rec.videoId || rec.id;
                   const thumb = getBestThumbnail(rec.videoThumbnails, recId) || `https://i.ytimg.com/vi/${recId}/mqdefault.jpg`;
                   const duration = formatDuration(rec.lengthSeconds);
@@ -184,7 +239,7 @@ export default function WatchPage() {
                           {rec.title}
                         </h4>
                         <div className="text-[11px] text-void-400 mt-1">
-                          <p className="truncate hover:text-void-200">{rec.author}</p>
+                          <p className="truncate hover:text-void-200">{rec.author || rec.authorName || 'قناة يوتيوب'}</p>
                           {views && <p className="text-void-500 text-[10px]">{views}</p>}
                         </div>
                       </div>
