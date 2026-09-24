@@ -1,5 +1,24 @@
 {
   "appId": "com.ahmedmonged.voidtube",
   "appName": "VoidTube",
-  "webDir": "dist"
+  "webDir": "dist",
+  "server": {
+    "url": "https://voidtube-one.vercel.app",
+    "cleartext": true,
+    "allowNavigation": [
+      "voidtube-one.vercel.app",
+      "*.invidious.f5.si",
+      "*.googlevideo.com",
+      "*.ytimg.com",
+      "*.savenow.to",
+      "loader.to",
+      "api.allorigins.win",
+      "corsproxy.io"
+    ]
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
 }
