@@ -11,7 +11,8 @@ export default function DownloadsDrawer() {
     removeDownload,
     clearAllDownloads,
     navigateToWatch,
-    navigateToHome
+    navigateToHome,
+    openDownloadModal
   } = useApp();
 
   const [confirmClear, setConfirmClear] = useState(false);
@@ -25,21 +26,31 @@ export default function DownloadsDrawer() {
   };
 
   const handleReDownloadToPhone = (video) => {
-    const filename = `${(video.title || 'video').replace(/[/\\?%*:|"<>]/g, '_')}_${video.quality || '720p'}.mp4`;
-    const url = video.url || `https://invidious.f5.si/latest_version?id=${video.videoId}&itag=${video.quality?.includes('360') ? '18' : '22'}`;
-    
-    if (url) {
+    const vidId = video.videoId || video.id;
+    // If video has a valid direct CDN url (not an invidious latest_version URL)
+    if (video.url && !video.url.includes('invidious') && !video.url.includes('latest_version')) {
+      const filename = `${(video.title || 'video').replace(/[/\\?%*:|"<>]/g, '_')}_${video.quality || '720p'}.mp4`;
       const a = document.createElement('a');
-      a.href = url;
+      a.href = video.url;
       a.download = filename;
       a.setAttribute('download', filename);
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
-    }
+      setTimeout(() => {
+        try { document.body.removeChild(a); } catch (_) {}
+      }, 500);
 
-    setCopiedId(video.videoId);
-    setTimeout(() => setCopiedId(null), 2500);
+      setCopiedId(vidId);
+      setTimeout(() => setCopiedId(null), 2500);
+    } else {
+      // Open the in-app DownloadModal to fetch fresh direct link
+      setIsDownloadsOpen(false);
+      openDownloadModal({
+        ...video,
+        videoId: vidId
+      });
+    }
   };
 
   return (

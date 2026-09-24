@@ -12,7 +12,8 @@ import {
   Zap, 
   FolderDown, 
   RotateCw,
-  HardDrive
+  HardDrive,
+  AlertCircle
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatDuration } from '../../utils/formatters';
@@ -20,7 +21,8 @@ import { formatDuration } from '../../utils/formatters';
 export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
   const { addDownload, setIsDownloadsOpen } = useApp();
 
-  const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'downloading' | 'completed'
+  const [downloadState, setDownloadState] = useState('idle'); // 'idle' | 'downloading' | 'completed' | 'error'
+  const [selectedFormatType, setSelectedFormatType] = useState('720p');
   const [selectedFormat, setSelectedFormat] = useState(null);
   const [progress, setProgress] = useState(0);
   const [speed, setSpeed] = useState('4.8 MB/s');
@@ -69,17 +71,23 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
     try {
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
-      a.setAttribute('download', filename);
+      a.download = filename || 'video.mp4';
+      a.setAttribute('download', filename || 'video.mp4');
+      a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      setTimeout(() => {
+        try {
+          document.body.removeChild(a);
+        } catch (_) {}
+      }, 500);
     } catch (e) {
       console.warn('Direct file download fallback error:', e);
     }
   };
 
   const handleStartDownload = async (formatType) => {
+    setSelectedFormatType(formatType);
     let qualityLabel = '';
     let targetSize = 25.4;
     let apiFormat = '720';
@@ -179,8 +187,8 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
         }
 
         if (initData.progress_url) {
-          // Poll progress_url every 1.1s (up to 12 attempts)
-          for (let i = 0; i < 12; i++) {
+          // Poll progress_url every 1.1s (up to 30 attempts ~33s)
+          for (let i = 0; i < 30; i++) {
             if (isCompleted) break;
             await new Promise(r => setTimeout(r, 1100));
             try {
@@ -203,13 +211,20 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
         }
       }
     } catch (apiErr) {
-      console.warn('Direct download API error, falling back:', apiErr);
+      console.warn('Direct download API error:', apiErr);
     }
 
-    // Direct stream fallback
+    // If directStream from formatStreams is available, use that safely
+    if (!isCompleted && directStream && directStream.includes('.googlevideo.com')) {
+      finishDownload(directStream);
+      return;
+    }
+
+    // If still not completed after 30 attempts, show error in modal without opening any 502 bad gateway page
     if (!isCompleted) {
-      const fallbackUrl = directStream || `https://invidious.f5.si/latest_version?id=${videoId}&itag=${formatType === '360p' ? '18' : '22'}`;
-      finishDownload(fallbackUrl);
+      if (timerRef.current) clearInterval(timerRef.current);
+      setDownloadState('error');
+      setStatusMessage('استغرق السيرفر وقتاً أطول من المعتاد في معالجة الفيديو.');
     }
   };
 
@@ -556,6 +571,48 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
               </div>
             </div>
 
+          </div>
+        )}
+
+        {/* =========================================================
+            STATE 4: ERROR (In-App Retry - No Broken External Pages)
+           ========================================================= */}
+        {downloadState === 'error' && (
+          <div className="py-4 flex flex-col items-center text-center gap-4 animate-fade-in">
+            <div className="w-16 h-16 rounded-full bg-red-500/15 border-2 border-red-500/30 flex items-center justify-center text-red-400 shadow-[0_0_25px_rgba(239,68,68,0.25)]">
+              <AlertCircle size={34} className="stroke-[2.2]" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-white">
+                تعذر تجهيز رابط التنزيل المباشر
+              </h3>
+              <p className="text-xs text-void-300 max-w-sm leading-relaxed">
+                {statusMessage || 'استغرق السيرفر وقتاً أطول من المعتاد. يرجى المحاولة مرة أخرى أو اختيار دقة أخرى.'}
+              </p>
+            </div>
+
+            <div className="w-full flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => handleStartDownload(selectedFormatType || '720p')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-neon-purple hover:bg-purple-600 text-white text-xs font-bold shadow-neon-purple transition-all active:scale-95"
+              >
+                <RotateCw size={15} />
+                <span>إعادة المحاولة الآن</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDownloadState('idle');
+                  setProgress(0);
+                }}
+                className="px-4 py-3 rounded-2xl bg-white/5 hover:bg-white/10 text-void-300 hover:text-white text-xs font-semibold transition-all"
+              >
+                تغيير الجودة
+              </button>
+            </div>
           </div>
         )}
 
