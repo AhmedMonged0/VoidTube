@@ -29,9 +29,11 @@ export default function DownloadsDrawer() {
     const vidId = video.videoId || video.id;
     // If video has a valid direct CDN url (not an invidious latest_version URL)
     if (video.url && !video.url.includes('invidious') && !video.url.includes('latest_version')) {
-      const filename = `${(video.title || 'video').replace(/[/\\?%*:|"<>]/g, '_')}_${video.quality || '720p'}.mp4`;
+      const cleanTitle = (video.title || 'video').replace(/[/\\?%*:|"<>]/g, '_').slice(0, 50).trim();
+      const filename = `[VoidTube] ${cleanTitle} (${video.quality || '720p'}).mp4`;
+      const downloadHref = `/api/download-file?url=${encodeURIComponent(video.url)}&name=${encodeURIComponent(filename)}`;
       const a = document.createElement('a');
-      a.href = video.url;
+      a.href = downloadHref;
       a.download = filename;
       a.setAttribute('download', filename);
       a.style.display = 'none';

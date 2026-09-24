@@ -69,10 +69,13 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
   const triggerDeviceDownload = (url, filename) => {
     if (!url) return;
     try {
+      const safeFilename = filename || 'video.mp4';
+      // Route through local same-origin proxy to ensure Windows and Android save with clean .mp4 extension and title
+      const downloadHref = `/api/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(safeFilename)}`;
       const a = document.createElement('a');
-      a.href = url;
-      a.download = filename || 'video.mp4';
-      a.setAttribute('download', filename || 'video.mp4');
+      a.href = downloadHref;
+      a.download = safeFilename;
+      a.setAttribute('download', safeFilename);
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
