@@ -26,16 +26,17 @@ export default function DownloadsDrawer() {
 
   const handleReDownloadToPhone = (video) => {
     const filename = `${(video.title || 'video').replace(/[/\\?%*:|"<>]/g, '_')}_${video.quality || '720p'}.mp4`;
-    const url = video.url || `https://yewtu.be/latest_version?id=${video.videoId}&itag=${video.quality?.includes('360') ? '18' : '22'}`;
+    const url = video.url || `https://invidious.f5.si/latest_version?id=${video.videoId}&itag=${video.quality?.includes('360') ? '18' : '22'}`;
     
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.setAttribute('download', filename);
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
 
     setCopiedId(video.videoId);
     setTimeout(() => setCopiedId(null), 2500);
