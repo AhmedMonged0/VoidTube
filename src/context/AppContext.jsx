@@ -79,7 +79,7 @@ export function AppProvider({ children }) {
   // Offline / In-App Saved Downloads
   const [downloads, setDownloads] = useState([]);
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
-  const [downloadModalVideo, setDownloadModalVideo] = useState(null);
+  const [downloadingVideos, setDownloadingVideos] = useState([]); // List of videoIds currently downloading
 
   // Load offline downloads from IndexedDB
   useEffect(() => {
@@ -88,14 +88,31 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  const openDownloadModal = useCallback((video) => {
+  const triggerBackgroundDownload = useCallback((video) => {
     if (!video) return;
-    setDownloadModalVideo(video);
-  }, []);
+    const videoId = video.videoId || video.id;
+    if (!videoId || downloadingVideos.includes(videoId)) return;
 
-  const closeDownloadModal = useCallback(() => {
-    setDownloadModalVideo(null);
-  }, []);
+    setDownloadingVideos(prev => [...prev, videoId]);
+
+    import('../utils/downloadManager').then(({ startBackgroundDownload }) => {
+      startBackgroundDownload(
+        video,
+        (savedObj) => {
+          setDownloadingVideos(prev => prev.filter(id => id !== videoId));
+          setDownloads(prev => {
+            const filtered = prev.filter(v => v.videoId !== videoId);
+            return [{ ...savedObj, savedAt: Date.now() }, ...filtered];
+          });
+          // Show some native-like non-intrusive alert (optional, but UI will update)
+        },
+        (errId) => {
+          setDownloadingVideos(prev => prev.filter(id => id !== videoId));
+          console.warn('Download failed for', errId);
+        }
+      );
+    });
+  }, [downloadingVideos]);
 
   const addDownload = useCallback((item) => {
     if (!item || !item.videoId) return;
@@ -318,13 +335,11 @@ export function AppProvider({ children }) {
         downloads,
         isDownloadsOpen,
         setIsDownloadsOpen,
-        addDownload,
+        triggerBackgroundDownload,
+        downloadingVideos,
         removeDownload,
         clearAllDownloads,
         isVideoDownloaded,
-        downloadModalVideo,
-        openDownloadModal,
-        closeDownloadModal,
       }}
     >
       {children}

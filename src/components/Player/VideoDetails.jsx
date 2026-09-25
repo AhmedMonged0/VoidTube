@@ -14,13 +14,12 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatViews, formatTimeAgo } from '../../utils/formatters';
-import DownloadModal from './DownloadModal';
+import { Loader2 } from 'lucide-react';
 
 export default function VideoDetails({ videoData, videoId }) {
-  const { isWatchLater, toggleWatchLater, navigateToSearch, openDownloadModal, isVideoDownloaded } = useApp();
+  const { isWatchLater, toggleWatchLater, navigateToSearch, triggerBackgroundDownload, isVideoDownloaded, downloadingVideos } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [isDownloadOpen, setIsDownloadOpen] = useState(false);
 
   if (!videoData) return null;
 
@@ -104,24 +103,25 @@ export default function VideoDetails({ videoData, videoId }) {
           {/* Download Button */}
           <button
             onClick={() => {
-              if (typeof openDownloadModal === 'function') {
-                openDownloadModal({
+              if (typeof triggerBackgroundDownload === 'function') {
+                triggerBackgroundDownload({
                   ...videoData,
                   videoId
                 });
-              } else {
-                setIsDownloadOpen(true);
               }
             }}
+            disabled={downloadingVideos?.includes(videoId) || isVideoDownloaded?.(videoId)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold shadow-sm transition-all active:scale-95 ${
               isVideoDownloaded?.(videoId)
                 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                : downloadingVideos?.includes(videoId)
+                ? 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'
                 : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-500/20'
             }`}
-            title="تنزيل الفيديو وحفظه على الهاتف وتطبيق VoidTube"
+            title="تنزيل الفيديو وحفظه أوفلاين"
           >
-            {isVideoDownloaded?.(videoId) ? <Check size={14} className="text-emerald-400" /> : <Download size={14} />}
-            <span>{isVideoDownloaded?.(videoId) ? 'تم التنزيل' : 'تنزيل'}</span>
+            {isVideoDownloaded?.(videoId) ? <Check size={14} className="text-emerald-400" /> : downloadingVideos?.includes(videoId) ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            <span>{isVideoDownloaded?.(videoId) ? 'تم التنزيل' : downloadingVideos?.includes(videoId) ? 'جاري التنزيل...' : 'تنزيل'}</span>
           </button>
 
           {/* Bookmark (Watch Later) Button */}
@@ -198,14 +198,6 @@ export default function VideoDetails({ videoData, videoId }) {
           </button>
         )}
       </div>
-
-      {/* Download Modal Dialog */}
-      <DownloadModal
-        videoData={videoData}
-        videoId={videoId}
-        isOpen={isDownloadOpen}
-        onClose={() => setIsDownloadOpen(false)}
-      />
     </div>
   );
 }

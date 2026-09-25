@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bookmark, Check, Play, CheckCircle2, Download, MoreVertical } from 'lucide-react';
+import { Bookmark, Check, Play, CheckCircle2, Download, MoreVertical, Loader2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { formatDuration, formatViews, formatTimeAgo, getBestThumbnail } from '../utils/formatters';
 
@@ -22,7 +22,7 @@ function getAvatarGradient(name = '') {
 }
 
 export default function VideoCard({ video, priority = false }) {
-  const { navigateToWatch, toggleWatchLater, isWatchLater, openDownloadModal, isVideoDownloaded } = useApp();
+  const { navigateToWatch, toggleWatchLater, isWatchLater, triggerBackgroundDownload, isVideoDownloaded, downloadingVideos } = useApp();
   const [imgError, setImgError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -61,10 +61,8 @@ export default function VideoCard({ video, priority = false }) {
 
   const handleDirectDownload = (e) => {
     e.stopPropagation();
-    if (typeof openDownloadModal === 'function') {
-      openDownloadModal(video);
-    } else {
-      navigateToWatch(videoId, video);
+    if (typeof triggerBackgroundDownload === 'function') {
+      triggerBackgroundDownload(video);
     }
   };
 
@@ -174,11 +172,14 @@ export default function VideoCard({ video, priority = false }) {
             className={`p-1.5 sm:p-2 rounded-xl transition-all active:scale-95 ${
               downloaded
                 ? 'text-emerald-400 bg-emerald-500/15 border border-emerald-500/30'
+                : downloadingVideos?.includes(videoId)
+                ? 'text-neon-purple bg-neon-purple/15 border border-neon-purple/30'
                 : 'text-void-400 hover:text-emerald-400 hover:bg-emerald-500/10'
             }`}
-            title={downloaded ? "تم تنزيل هذا الفيديو - اضغط لتنزيل نسخة أخرى أو إدارته" : "تنزيل الفيديو على الهاتف وتطبيق VoidTube"}
+            disabled={downloadingVideos?.includes(videoId) || downloaded}
+            title={downloaded ? "تم تنزيل هذا الفيديو - متاح بقائمة التنزيلات" : "تنزيل الفيديو على الهاتف وتطبيق VoidTube"}
           >
-            {downloaded ? <Check size={16} className="text-emerald-400" /> : <Download size={16} />}
+            {downloaded ? <Check size={16} className="text-emerald-400" /> : downloadingVideos?.includes(videoId) ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
           </button>
         </div>
 

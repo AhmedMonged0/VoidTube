@@ -12,7 +12,7 @@ export default function DownloadsDrawer() {
     clearAllDownloads,
     navigateToWatch,
     navigateToHome,
-    openDownloadModal
+    triggerBackgroundDownload
   } = useApp();
 
   const [confirmClear, setConfirmClear] = useState(false);
@@ -46,12 +46,14 @@ export default function DownloadsDrawer() {
       setCopiedId(vidId);
       setTimeout(() => setCopiedId(null), 2500);
     } else {
-      // Open the in-app DownloadModal to fetch fresh direct link
+      // Download in background
       setIsDownloadsOpen(false);
-      openDownloadModal({
-        ...video,
-        videoId: vidId
-      });
+      if (typeof triggerBackgroundDownload === 'function') {
+        triggerBackgroundDownload({
+          ...video,
+          videoId: vidId
+        });
+      }
     }
   };
 
