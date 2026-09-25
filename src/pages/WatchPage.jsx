@@ -28,10 +28,11 @@ export default function WatchPage() {
     api.getVideoDetails(videoId)
       .then((data) => {
         if (isMounted) {
-          setVideoData(data);
+          const merged = nav.videoData ? { ...data, ...nav.videoData } : data;
+          setVideoData(merged);
           setLoading(false);
-          if (data?.title) {
-            document.title = `${data.title} — VoidTube`;
+          if (merged?.title) {
+            document.title = `${merged.title} — VoidTube`;
           }
         }
       })

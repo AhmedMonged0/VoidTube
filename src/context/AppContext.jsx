@@ -89,7 +89,7 @@ export function AppProvider({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
-  const [downloads, setDownloads] = useState([]);
+  const [downloads, setDownloads] = useState(() => safeGetStorage(STORAGE_KEYS.DOWNLOADS, []));
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
   const [downloadingVideos, setDownloadingVideos] = useState([]); // List of videoIds currently downloading
   
@@ -103,7 +103,7 @@ export function AppProvider({ children }) {
   }, []);
 
   // In-App Updater State
-  const CURRENT_APP_VERSION = '1.0.3';
+  const CURRENT_APP_VERSION = '1.0.4';
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -134,10 +134,27 @@ export function AppProvider({ children }) {
     return () => clearTimeout(timer);
   }, [checkForUpdates]);
 
-  // Load offline downloads from IndexedDB
+  // Load and sync offline downloads from IndexedDB with localStorage
   useEffect(() => {
     import('../utils/indexedDB').then(({ getVideos }) => {
-      getVideos().then(vids => setDownloads(vids)).catch(console.error);
+      getVideos().then(dbVids => {
+        if (Array.isArray(dbVids) && dbVids.length > 0) {
+          setDownloads(prev => {
+            const merged = [...prev];
+            dbVids.forEach(dbV => {
+              const dbId = dbV.videoId || dbV.id;
+              const idx = merged.findIndex(m => (m.videoId || m.id) === dbId);
+              if (idx >= 0) {
+                merged[idx] = { ...merged[idx], ...dbV };
+              } else {
+                merged.push(dbV);
+              }
+            });
+            safeSetStorage(STORAGE_KEYS.DOWNLOADS, merged);
+            return merged;
+          });
+        }
+      }).catch(err => console.warn('IndexedDB sync error:', err));
     });
   }, []);
 
@@ -154,11 +171,34 @@ export function AppProvider({ children }) {
         video,
         (savedObj) => {
           setDownloadingVideos(prev => prev.filter(id => id !== videoId));
+          
+          const newDownloadItem = {
+            id: videoId,
+            videoId,
+            title: video.title || savedObj.title || 'فيديو يوتيوب',
+            thumbnail: video.thumbnail || video.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+            author: video.author || video.authorName || 'قناة يوتيوب',
+            lengthSeconds: video.lengthSeconds || 0,
+            quality: savedObj.quality || '720p HD',
+            url: savedObj.url,
+            savedAt: Date.now(),
+            ...savedObj,
+          };
+
+          // 1. Immediately save to React state and localStorage (permanent across restarts)
           setDownloads(prev => {
-            const filtered = prev.filter(v => v.videoId !== videoId);
-            return [{ ...savedObj, savedAt: Date.now() }, ...filtered];
+            const filtered = prev.filter(v => (v.videoId || v.id) !== videoId);
+            const updated = [newDownloadItem, ...filtered];
+            safeSetStorage(STORAGE_KEYS.DOWNLOADS, updated);
+            return updated;
           });
-          showToast('بدأ تنزيل الفيديو إلى هاتفك بنجاح! 📥', 'success');
+
+          // 2. Also persist into IndexedDB
+          import('../utils/indexedDB').then(({ saveVideo }) => {
+            saveVideo(newDownloadItem).catch(err => console.warn('saveVideo error:', err));
+          });
+
+          showToast('تم تنزيل وحفظ الفيديو داخل التطبيق بنجاح! 📥', 'success');
         },
         (errId) => {
           setDownloadingVideos(prev => prev.filter(id => id !== videoId));
@@ -170,34 +210,46 @@ export function AppProvider({ children }) {
 
   const addDownload = useCallback((item) => {
     if (!item || !item.videoId) return;
+    const id = item.videoId || item.id;
     setDownloads(prev => {
-      const filtered = prev.filter(v => v.videoId !== item.videoId);
-      const updated = [{ ...item, savedAt: Date.now() }, ...filtered];
+      const filtered = prev.filter(v => (v.videoId || v.id) !== id);
+      const updated = [{ ...item, id, savedAt: Date.now() }, ...filtered];
+      safeSetStorage(STORAGE_KEYS.DOWNLOADS, updated);
       return updated;
     });
-    // Actual saving to DB happens in DownloadModal with the Blob
+    import('../utils/indexedDB').then(({ saveVideo }) => {
+      saveVideo({ ...item, id }).catch(console.warn);
+    });
   }, []);
 
   const removeDownload = useCallback((videoId) => {
-    setDownloads(prev => prev.filter(v => v.videoId !== videoId));
-    import('../utils/indexedDB').then(({ getVideos, deleteVideo }) => {
-      getVideos().then(vids => {
-        const vid = vids.find(v => v.videoId === videoId);
-        if (vid) deleteVideo(vid.id);
-      });
+    setDownloads(prev => {
+      const filtered = prev.filter(v => (v.videoId || v.id) !== videoId);
+      safeSetStorage(STORAGE_KEYS.DOWNLOADS, filtered);
+      return filtered;
     });
-  }, []);
+    import('../utils/indexedDB').then(({ deleteVideo }) => {
+      deleteVideo(videoId).catch(console.warn);
+    });
+    showToast('تمت إزالة الفيديو من التنزيلات المحفوظة', 'info');
+  }, [showToast]);
 
   const clearAllDownloads = useCallback(() => {
     setDownloads([]);
+    safeSetStorage(STORAGE_KEYS.DOWNLOADS, []);
     import('../utils/indexedDB').then(({ getVideos, deleteVideo }) => {
-      getVideos().then(vids => vids.forEach(v => deleteVideo(v.id)));
+      getVideos().then(vids => {
+        if (Array.isArray(vids)) {
+          vids.forEach(v => deleteVideo(v.id || v.videoId));
+        }
+      }).catch(console.warn);
     });
-  }, []);
+    showToast('تم مسح جميع التنزيلات المحفوظة', 'info');
+  }, [showToast]);
 
   const isVideoDownloaded = useCallback((videoId) => {
     if (!videoId) return false;
-    return downloads.some(v => v.videoId === videoId);
+    return downloads.some(v => (v.videoId || v.id) === videoId);
   }, [downloads]);
 
   // Active Invidious instance

@@ -79,11 +79,16 @@ export async function startBackgroundDownload(video, onComplete, onError) {
     console.warn('Window open error:', winErr);
   }
 
-  // 5. Notify success
+  // 5. Notify success with full video info
   if (onComplete) {
     onComplete({
+      ...video,
+      id: videoId,
       videoId,
       title,
+      thumbnail: video.thumbnail || video.videoThumbnails?.[0]?.url || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+      author: video.author || video.authorName || 'قناة يوتيوب',
+      lengthSeconds: video.lengthSeconds || 0,
       quality: '720p HD',
       url: finalUrl,
       downloadedAt: new Date().toISOString()

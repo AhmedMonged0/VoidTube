@@ -33,7 +33,7 @@ export default function VideoPlayer({
   // Extract available formats
   const formatStreams = videoData?.formatStreams || [];
 
-  // Initialize best format stream (prefer 720p or 360p MP4)
+  // Initialize best format stream (prefer blob, downloaded url, or 720p/360p MP4)
   useEffect(() => {
     if (videoData?.blob) {
       const blobUrl = URL.createObjectURL(videoData.blob);
@@ -44,6 +44,11 @@ export default function VideoPlayer({
       return () => {
         URL.revokeObjectURL(blobUrl);
       };
+    } else if (videoData?.url) {
+      // Direct downloaded MP4 stream or local URL!
+      setSelectedFormat({ url: videoData.url, resolution: videoData.quality || '720p HD', container: 'mp4' });
+      setStreamError(false);
+      setUseEmbed(false);
     } else if (formatStreams.length > 0) {
       const preferred = formatStreams.find(f => f.resolution === '720p' && f.container === 'mp4')
         || formatStreams.find(f => f.resolution === '360p' && f.container === 'mp4')
@@ -71,9 +76,11 @@ export default function VideoPlayer({
     const handleWaiting = () => setBuffering(true);
     const handlePlaying = () => setBuffering(false);
     const handleError = () => {
-      console.warn('[VoidTube Player] Direct stream failed or blocked by CORS. Falling back to Embed player.');
+      console.warn('[VoidTube Player] Direct stream failed or blocked by CORS.');
       setStreamError(true);
-      setUseEmbed(true);
+      if (!videoData?.blob && !videoData?.url) {
+        setUseEmbed(true);
+      }
     };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
