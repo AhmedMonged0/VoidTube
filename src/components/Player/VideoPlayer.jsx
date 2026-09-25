@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Loader2, AlertCircle, RefreshCw, MonitorPlay, Sparkles } from 'lucide-react';
+import { Play, Pause, Loader2, AlertCircle, RefreshCw, MonitorPlay, Sparkles, ChevronDown } from 'lucide-react';
 import PlayerControls from './PlayerControls';
 import { useApp } from '../../context/AppContext';
 
@@ -8,6 +8,9 @@ export default function VideoPlayer({
   videoData = null,
   isTheater = false,
   onToggleTheater = () => {},
+  isMini = false,
+  onMinimize = null,
+  playerRef = null,
 }) {
   const { activeInstance } = useApp();
   const containerRef = useRef(null);
@@ -219,34 +222,63 @@ export default function VideoPlayer({
   // Using privacy-first YouTube nocookie with clean distraction-free parameters or Invidious embed
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3`;
 
+  // Keep playerRef updated for external controls (e.g., Mini Player bar)
+  if (playerRef) {
+    playerRef.current = {
+      togglePlay,
+      isPlaying,
+      currentTime,
+      duration,
+      videoElement: videoRef.current,
+      seek: handleSeek
+    };
+  }
+
   return (
     <div
       ref={containerRef}
       onMouseMove={handleMouseMove}
-      onMouseLeave={() => isPlaying && setShowControls(false)}
-      className="relative w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/[0.08] select-none group/player"
+      className={`relative w-full h-full bg-black select-none group/player overflow-hidden ${
+        isMini ? 'pointer-events-none' : ''
+      }`}
     >
-      {/* Engine 1: Direct HTML5 Video Player */}
-      {!useEmbed && selectedFormat?.url ? (
+      {/* Minimize Overlay Button (Shown on hover/controls when in full player mode) */}
+      {!isMini && onMinimize && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onMinimize();
+          }}
+          className={`absolute top-3 left-3 z-30 p-2 rounded-full bg-black/60 hover:bg-neon-purple text-white border border-white/10 backdrop-blur-md transition-all duration-200 active:scale-90 shadow-xl ${
+            showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+          title="تصغير المشغل للمشاهدة أثناء التصفح (مثل يوتيوب)"
+        >
+          <ChevronDown size={22} className="hover:translate-y-0.5 transition-transform" />
+        </button>
+      )}
+
+      {!useEmbed ? (
+        /* Engine 1: Native HTML5 Direct Player */
         <div className="relative w-full h-full flex items-center justify-center">
           <video
             ref={videoRef}
-            src={selectedFormat.url}
-            autoPlay
+            src={selectedFormat?.url}
+            poster={videoData?.thumbnailUrl || (videoData?.videoThumbnails?.[0]?.url)}
+            onClick={!isMini ? togglePlay : undefined}
             playsInline
-            onClick={togglePlay}
             className="w-full h-full object-contain cursor-pointer"
           />
 
           {/* Buffering Indicator */}
-          {buffering && (
+          {!isMini && buffering && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
               <Loader2 size={44} className="text-neon-purple animate-spin" />
             </div>
           )}
 
           {/* Play/Pause Center Flash Animation */}
-          {centerIcon && (
+          {!isMini && centerIcon && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="w-16 h-16 rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center border border-white/20 text-white animate-fade-in scale-110">
                 {centerIcon === 'play' ? <Play size={28} className="fill-white ml-1" /> : <Pause size={28} className="fill-white" />}
@@ -254,38 +286,40 @@ export default function VideoPlayer({
             </div>
           )}
 
-          {/* Custom Player Controls */}
-          <PlayerControls
-            isPlaying={isPlaying}
-            onTogglePlay={togglePlay}
-            currentTime={currentTime}
-            duration={duration}
-            onSeek={handleSeek}
-            volume={volume}
-            isMuted={isMuted}
-            onVolumeChange={handleVolumeChange}
-            onToggleMute={toggleMute}
-            onSkip={handleSkip}
-            isFullscreen={isFullscreen}
-            onToggleFullscreen={toggleFullscreen}
-            isTheater={isTheater}
-            onToggleTheater={onToggleTheater}
-            formats={videoData?.blob ? [selectedFormat] : formatStreams}
-            currentFormat={selectedFormat}
-            onSelectFormat={(fmt) => {
-              if (videoData?.blob) return;
-              setSelectedFormat(fmt);
-              if (videoRef.current) {
-                const prevTime = videoRef.current.currentTime;
-                videoRef.current.src = fmt.url;
-                videoRef.current.currentTime = prevTime;
-                videoRef.current.play().catch(() => {});
-              }
-            }}
-            showControls={showControls}
-            isDirectStream={true}
-            onToggleEngine={() => { if (!videoData?.blob) setUseEmbed(true); }}
-          />
+          {/* Custom Player Controls (Full mode only) */}
+          {!isMini && (
+            <PlayerControls
+              isPlaying={isPlaying}
+              onTogglePlay={togglePlay}
+              currentTime={currentTime}
+              duration={duration}
+              onSeek={handleSeek}
+              volume={volume}
+              isMuted={isMuted}
+              onVolumeChange={handleVolumeChange}
+              onToggleMute={toggleMute}
+              onSkip={handleSkip}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={toggleFullscreen}
+              isTheater={isTheater}
+              onToggleTheater={onToggleTheater}
+              formats={videoData?.blob ? [selectedFormat] : formatStreams}
+              currentFormat={selectedFormat}
+              onSelectFormat={(fmt) => {
+                if (videoData?.blob) return;
+                setSelectedFormat(fmt);
+                if (videoRef.current) {
+                  const prevTime = videoRef.current.currentTime;
+                  videoRef.current.src = fmt.url;
+                  videoRef.current.currentTime = prevTime;
+                  videoRef.current.play().catch(() => {});
+                }
+              }}
+              showControls={showControls}
+              isDirectStream={true}
+              onToggleEngine={() => { if (!videoData?.blob) setUseEmbed(true); }}
+            />
+          )}
         </div>
       ) : (
         /* Engine 2: Distraction-free Embed Player */
@@ -295,17 +329,17 @@ export default function VideoPlayer({
             title={videoData?.title || 'VoidTube Video'}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
-            className="w-full h-full border-0"
+            className="w-full h-full border-0 pointer-events-auto"
           />
 
           {/* Direct Stream Retry Badge in Embed Mode */}
-          {formatStreams.length > 0 && (
+          {formatStreams.length > 0 && !isMini && (
             <button
               onClick={() => {
                 setUseEmbed(false);
                 setStreamError(false);
               }}
-              className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 hover:bg-neon-purple text-white text-[11px] font-semibold border border-white/10 backdrop-blur-md transition-all shadow-lg"
+              className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 hover:bg-neon-purple text-white text-[11px] font-semibold border border-white/10 backdrop-blur-md transition-all shadow-lg"
               title="Attempt direct HTML5 stream"
             >
               <RefreshCw size={12} />

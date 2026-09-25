@@ -89,6 +89,27 @@ export function AppProvider({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
+  // Mini Player State (YouTube-like floating player)
+  const [miniPlayer, setMiniPlayer] = useState(null); // { videoId, videoData } | null
+
+  const showMiniPlayer = useCallback((videoId, videoData) => {
+    setMiniPlayer({ videoId, videoData });
+  }, []);
+
+  const hideMiniPlayer = useCallback(() => {
+    setMiniPlayer(null);
+  }, []);
+
+  const expandMiniPlayer = useCallback(() => {
+    // Will navigate to watch page and close mini player
+    if (miniPlayer?.videoId) {
+      window.history.pushState({}, '', `?v=${miniPlayer.videoId}`);
+      setNav({ page: 'watch', videoId: miniPlayer.videoId, query: '', videoData: miniPlayer.videoData });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    setMiniPlayer(null);
+  }, [miniPlayer]);
+
   const [downloads, setDownloads] = useState(() => safeGetStorage(STORAGE_KEYS.DOWNLOADS, []));
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
   const [downloadingVideos, setDownloadingVideos] = useState([]); // List of videoIds currently downloading
@@ -500,6 +521,10 @@ export function AppProvider({ children }) {
         setAppToast,
         showToast,
         CURRENT_APP_VERSION,
+        miniPlayer,
+        showMiniPlayer,
+        hideMiniPlayer,
+        expandMiniPlayer,
       }}
     >
       {children}

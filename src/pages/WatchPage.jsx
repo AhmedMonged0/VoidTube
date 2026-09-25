@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
 import VideoPlayer from '../components/Player/VideoPlayer';
@@ -7,8 +7,9 @@ import { formatDuration, formatViews, formatTimeAgo, getBestThumbnail } from '..
 import { Play, Sparkles, AlertCircle, RotateCcw, Loader2 } from 'lucide-react';
 
 export default function WatchPage() {
-  const { nav, navigateToWatch } = useApp();
+  const { nav, navigateToWatch, showMiniPlayer, navigateToHome } = useApp();
   const videoId = nav.videoId;
+  const playerRef = useRef(null);
 
   const [videoData, setVideoData] = useState(() => nav.videoData || null);
   const [loading, setLoading] = useState(!nav.videoData);
@@ -16,6 +17,23 @@ export default function WatchPage() {
   const [isTheater, setIsTheater] = useState(false);
   const [relatedVideos, setRelatedVideos] = useState([]);
   const [relatedLoading, setRelatedLoading] = useState(true);
+
+  // Minimize: slide into floating mini player
+  const handleMinimize = () => {
+    showMiniPlayer(videoId, videoData);
+    navigateToHome();
+  };
+
+  // Intercept browser back button to minimize instead of hard-close
+  useEffect(() => {
+    const handlePopState = (e) => {
+      e.preventDefault();
+      showMiniPlayer(videoId, videoData);
+      // Let navigation proceed naturally (AppContext popstate will set nav to home/prev)
+    };
+    window.addEventListener('popstate', handlePopState, { once: true });
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [videoId, videoData, showMiniPlayer]);
 
   // Fetch video details
   useEffect(() => {
@@ -163,6 +181,8 @@ export default function WatchPage() {
             videoData={videoData}
             isTheater={isTheater}
             onToggleTheater={() => setIsTheater(!isTheater)}
+            onMinimize={handleMinimize}
+            playerRef={playerRef}
           />
 
           {/* Video Details */}

@@ -15,6 +15,7 @@ import UpdateModal from './components/UpdateModal';
 import ToastNotification from './components/ToastNotification';
 import MobileBottomNav from './components/MobileBottomNav';
 import Sidebar from './components/Sidebar';
+import MiniPlayer from './components/Player/MiniPlayer';
 import { Shield, Zap } from 'lucide-react';
 
 function AppContent() {
@@ -69,6 +70,9 @@ function AppContent() {
       <ApkDownloadModal isOpen={isApkModalOpen} onClose={() => setIsApkModalOpen(false)} />
       <UpdateModal />
       <ToastNotification />
+
+      {/* Floating MiniPlayer (YouTube-style) */}
+      <MiniPlayer />
 
       {/* Minimalist Cinematic Footer (Desktop view) */}
       <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16 hidden md:block">
