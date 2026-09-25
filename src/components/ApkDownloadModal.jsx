@@ -44,9 +44,9 @@ export default function ApkDownloadModal({ isOpen, onClose }) {
 
         {/* Header Icon & Title */}
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#1f1635] to-[#2e1d52] border border-neon-purple/40 flex items-center justify-center shadow-neon-purple mb-4 relative">
-            <Smartphone size={32} className="text-neon-purple" />
-            <span className="absolute -top-1 -right-1 flex h-4 w-4">
+          <div className="w-16 h-16 rounded-2xl bg-[#08080c] border border-neon-purple/40 flex items-center justify-center shadow-neon-purple mb-4 relative overflow-hidden">
+            <img src="/logo.png" alt="VoidTube App" className="w-full h-full object-cover" />
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 z-10">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 text-[9px] font-black text-black items-center justify-center">✓</span>
             </span>

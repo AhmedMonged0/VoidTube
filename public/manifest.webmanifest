@@ -13,20 +13,15 @@
   "dir": "rtl",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/favicon.svg",
+      "src": "/logo-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml"
-    },
-    {
-      "src": "/favicon.svg",
-      "sizes": "512x512",
-      "type": "image/svg+xml"
+      "type": "image/png"
     }
   ],
   "categories": ["entertainment", "video", "multimedia"]

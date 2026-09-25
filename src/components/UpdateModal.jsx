@@ -44,9 +44,9 @@ export default function UpdateModal() {
         {/* Glow Effects */}
         <div className="absolute -top-20 -right-20 w-48 h-48 bg-neon-purple/20 rounded-full blur-3xl pointer-events-none" />
         
-        {/* Icon */}
-        <div className="w-20 h-20 rounded-full bg-neon-purple/15 border-2 border-neon-purple/30 flex items-center justify-center text-neon-purple shadow-[0_0_30px_rgba(139,92,246,0.4)] animate-bounce mb-5">
-          <Rocket size={40} className="stroke-[2.5]" />
+        {/* App Logo with Glow */}
+        <div className="relative w-20 h-20 rounded-2xl bg-[#08080c] border border-neon-purple/40 shadow-[0_0_30px_rgba(139,92,246,0.4)] mb-5 overflow-hidden p-1">
+          <img src="/logo.png" alt="VoidTube Update" className="w-full h-full object-cover rounded-xl" />
         </div>
         
         {/* Texts */}

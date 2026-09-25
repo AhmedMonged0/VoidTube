@@ -302,8 +302,8 @@ export default function Sidebar() {
       {/* 7. App Info & Update Checker */}
       <div className="mt-auto pt-4 border-t border-white/[0.08] flex flex-col gap-2">
         <div className="flex items-center justify-between text-xs text-void-400">
-          <span className="flex items-center gap-1 font-semibold text-white">
-            <Sparkles size={13} className="text-neon-purple" />
+          <span className="flex items-center gap-2 font-semibold text-white">
+            <img src="/logo.png" alt="VoidTube" className="w-4 h-4 rounded-md object-cover" />
             VoidTube Native
           </span>
           <span className="font-mono text-[11px] text-white/80 bg-white/5 px-2.5 py-0.5 rounded-full border border-white/5">

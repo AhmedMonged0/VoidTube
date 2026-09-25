@@ -119,11 +119,9 @@ export default function Header({ onOpenApkModal }) {
                 onClick={navigateToHome}
                 className="flex items-center gap-2 sm:gap-2.5 group text-left focus:outline-none"
               >
-                {/* Glowing Void Icon */}
-                <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-purple-950 via-[#161426] to-[#251b3d] p-[1px] shadow-neon-purple group-hover:shadow-[0_0_25px_rgba(168,85,247,0.6)] transition-all duration-300">
-                  <div className="w-full h-full bg-[#0d0d12] rounded-[11px] flex items-center justify-center">
-                    <Play size={15} className="text-neon-purple fill-neon-purple ml-0.5 group-hover:scale-110 transition-transform duration-200" />
-                  </div>
+                {/* Glowing Void Brand Logo */}
+                <div className="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden bg-[#08080c] border border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.35)] group-hover:shadow-[0_0_25px_rgba(168,85,247,0.7)] group-hover:scale-105 transition-all duration-300">
+                  <img src="/logo.png" alt="VoidTube Logo" className="w-full h-full object-cover" />
                 </div>
 
                 {/* Typography */}
