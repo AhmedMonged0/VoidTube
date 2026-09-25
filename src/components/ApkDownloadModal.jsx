@@ -73,7 +73,7 @@ export default function ApkDownloadModal({ isOpen, onClose }) {
           >
             <Download size={22} className="animate-bounce" />
             <span>تحميل ملف VoidTube.apk مباشرة</span>
-            <span className="text-xs px-2 py-0.5 rounded-lg bg-black/30 font-mono font-medium">5.1 MB</span>
+            <span className="text-xs px-2 py-0.5 rounded-lg bg-black/30 font-mono font-medium">~8 MB</span>
           </a>
 
           {downloadStarted && (
