@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Loader2, RefreshCw, Sparkles } from 'lucide-react';
+import { Loader2, RefreshCw, Sparkles } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
 import VideoGrid from '../components/VideoGrid';
@@ -15,71 +15,68 @@ export default function HomePage() {
   const [hasMore, setHasMore] = useState(true);
   const [refreshNotification, setRefreshNotification] = useState(null);
   const categoryOffsetRef = useRef(0);
+  const sentinelRef = useRef(null);
+  const loadingMoreRef = useRef(false);
+  const pageRef = useRef(1);
+  const hasMoreRef = useRef(true);
+  const selectedCategoryRef = useRef(selectedCategory);
 
-  // Fetch videos for the currently selected category with rotation & freshness
+  useEffect(() => { selectedCategoryRef.current = selectedCategory; }, [selectedCategory]);
+  useEffect(() => { pageRef.current = page; }, [page]);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+
   const fetchVideos = useCallback(async (catId = 'all', regionCode = region, isRefresh = false) => {
     setLoading(true);
     setError(null);
     setPage(1);
+    pageRef.current = 1;
     setHasMore(true);
+    hasMoreRef.current = true;
+    loadingMoreRef.current = false;
 
-    if (isRefresh) {
-      categoryOffsetRef.current = (categoryOffsetRef.current + 1);
-    }
+    if (isRefresh) categoryOffsetRef.current += 1;
 
     try {
+      let data = [];
       if (catId === 'all') {
-        const data = await api.getExploreFeed({ 
-          region: regionCode, 
-          page: 1, 
-          forceRefresh: isRefresh 
-        });
-        setVideos(Array.isArray(data) ? data : []);
+        data = await api.getExploreFeed({ region: regionCode, page: 1, forceRefresh: isRefresh });
       } else {
         const cat = ARABIC_CATEGORIES.find(c => c.id === catId);
         let query = cat ? cat.query : catId;
-        
-        // Pick dynamic subquery from category pool
         if (cat && Array.isArray(cat.queries) && cat.queries.length > 0) {
-          const qIdx = categoryOffsetRef.current % cat.queries.length;
-          query = cat.queries[qIdx];
+          query = cat.queries[categoryOffsetRef.current % cat.queries.length];
         }
-
-        const data = await api.searchVideos(query, 'video', 1, { 
-          bypassCache: isRefresh,
-          region: regionCode 
-        });
-        setVideos(Array.isArray(data) ? data : []);
+        data = await api.searchVideos(query, 'video', 1, { bypassCache: isRefresh, region: regionCode });
       }
-
+      setVideos(Array.isArray(data) ? data : []);
       if (isRefresh) {
         setRefreshNotification('✨ تم تحديث الفيديوهات وجلب محتوى جديد ومميز');
         setTimeout(() => setRefreshNotification(null), 3500);
       }
     } catch (err) {
-      console.error('Home feed fetch error:', err);
       setError(err.message || 'فشل تحميل الفيديوهات من الشبكة');
     } finally {
       setLoading(false);
     }
   }, [region]);
 
-  // Load more videos (pagination)
-  const handleLoadMore = async () => {
-    if (loadingMore || !hasMore) return;
+  const loadMore = useCallback(async () => {
+    if (loadingMoreRef.current || !hasMoreRef.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
 
-    const nextPage = page + 1;
+    const nextPage = pageRef.current + 1;
+    const catId = selectedCategoryRef.current;
+
     try {
       let newItems = [];
-      if (selectedCategory === 'all') {
+      if (catId === 'all') {
         newItems = await api.getExploreFeed({ region, page: nextPage });
       } else {
-        const cat = ARABIC_CATEGORIES.find(c => c.id === selectedCategory);
-        let query = cat ? cat.query : selectedCategory;
+        const cat = ARABIC_CATEGORIES.find(c => c.id === catId);
+        let query = cat ? cat.query : catId;
         if (cat && Array.isArray(cat.queries) && cat.queries.length > 0) {
-          const qIdx = (categoryOffsetRef.current + nextPage - 1) % cat.queries.length;
-          query = cat.queries[qIdx];
+          query = cat.queries[(categoryOffsetRef.current + nextPage - 1) % cat.queries.length];
         }
         newItems = await api.searchVideos(query, 'video', Math.floor((nextPage - 1) / 2) + 1, { region });
       }
@@ -87,62 +84,58 @@ export default function HomePage() {
       if (Array.isArray(newItems) && newItems.length > 0) {
         setVideos(prev => {
           const existingIds = new Set(prev.map(v => v.videoId || v.id));
-          const filtered = newItems.filter(v => !existingIds.has(v.videoId || v.id));
-          return [...prev, ...filtered];
+          return [...prev, ...newItems.filter(v => !existingIds.has(v.videoId || v.id))];
         });
         setPage(nextPage);
+        pageRef.current = nextPage;
       } else {
         setHasMore(false);
+        hasMoreRef.current = false;
       }
     } catch (err) {
-      console.warn('Load more error:', err);
+      console.warn('Infinite scroll error:', err);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  };
+  }, [region]);
 
-  // Re-fetch whenever selected category or region changes
   useEffect(() => {
     fetchVideos(selectedCategory, region, false);
   }, [selectedCategory, region, fetchVideos]);
 
-  const handleManualRefresh = () => {
-    fetchVideos(selectedCategory, region, true);
-  };
-
-  const handleCategorySelect = (catId) => {
-    if (catId === selectedCategory) {
-      // Clicking same category again refreshes with next subquery
-      fetchVideos(catId, region, true);
-    } else {
-      setSelectedCategory(catId);
-    }
-  };
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) loadMore();
+      },
+      { rootMargin: '400px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [loadMore]);
 
   return (
     <div className="flex flex-col gap-4 py-2 sm:py-4">
-      {/* Interactive Top Category Pills + New Content Refresh Button */}
       <div className="flex items-center justify-between gap-2.5 pb-2 border-b border-white/[0.04]">
         <div className="flex-1 overflow-hidden">
-          <CategoryPills
-            activeCategory={selectedCategory}
-            onSelectCategory={handleCategorySelect}
-          />
+          <CategoryPills activeCategory={selectedCategory} onSelectCategory={(catId) => {
+            if (catId === selectedCategory) fetchVideos(catId, region, true);
+            else setSelectedCategory(catId);
+          }} />
         </div>
-
-        {/* Dynamic New Content Button */}
         <button
-          onClick={handleManualRefresh}
+          onClick={() => fetchVideos(selectedCategory, region, true)}
           disabled={loading}
           className="shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-[#14141d] hover:bg-neon-purple/20 text-void-200 hover:text-white border border-white/10 hover:border-neon-purple/40 transition-all active:scale-95 shadow-sm group disabled:opacity-50"
-          title="تحديث الفيديوهات وتغيير المحتوى بالكامل"
         >
           <RefreshCw size={14} className={`text-neon-purple group-hover:rotate-180 transition-transform duration-500 ${loading ? 'animate-spin' : ''}`} />
           <span className="text-xs font-bold whitespace-nowrap">محتوى جديد</span>
         </button>
       </div>
 
-      {/* Floating Refresh Alert Toast */}
       {refreshNotification && (
         <div className="flex items-center justify-center animate-fade-in">
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-neon-purple/20 border border-neon-purple/50 text-white text-xs font-bold shadow-[0_0_20px_rgba(168,85,247,0.3)]">
@@ -152,7 +145,6 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Videos Grid */}
       <VideoGrid
         videos={videos}
         loading={loading}
@@ -161,26 +153,17 @@ export default function HomePage() {
         emptyMessage="لم يتم العثور على فيديوهات حالياً في هذا القسم."
       />
 
-      {/* Load More Button */}
-      {!loading && videos.length > 0 && hasMore && (
-        <div className="flex justify-center pt-4 pb-8">
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="flex items-center gap-2 px-8 py-3 rounded-full bg-[#161620] hover:bg-neon-purple text-white text-xs font-semibold border border-white/10 hover:border-neon-purple/60 shadow-lg hover:shadow-neon-purple transition-all duration-200 disabled:opacity-50 group"
-          >
-            {loadingMore ? (
-              <>
-                <Loader2 size={16} className="animate-spin text-neon-purple group-hover:text-white" />
-                <span>جاري جلب المزيد من الفيديوهات...</span>
-              </>
-            ) : (
-              <>
-                <Plus size={16} className="group-hover:rotate-90 transition-transform duration-200" />
-                <span>تحميل المزيد من الفيديوهات</span>
-              </>
-            )}
-          </button>
+      {!loading && videos.length > 0 && (
+        <div ref={sentinelRef} className="flex justify-center py-8">
+          {loadingMore && (
+            <div className="flex items-center gap-2 text-void-400 text-xs">
+              <Loader2 size={16} className="animate-spin text-neon-purple" />
+              <span>جارٍ تحميل المزيد...</span>
+            </div>
+          )}
+          {!hasMore && !loadingMore && (
+            <p className="text-void-600 text-xs">لا توجد فيديوهات إضافية</p>
+          )}
         </div>
       )}
     </div>
