@@ -80,30 +80,46 @@ export function AppProvider({ children }) {
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
   const [downloadingVideos, setDownloadingVideos] = useState([]); // List of videoIds currently downloading
   
+  // App Toast State
+  const [appToast, setAppToast] = useState(null);
+  const showToast = useCallback((message, type = 'info') => {
+    setAppToast({ message, type, id: Date.now() });
+    setTimeout(() => {
+      setAppToast(prev => (prev?.message === message ? null : prev));
+    }, 4500);
+  }, []);
+
   // In-App Updater State
-  const CURRENT_APP_VERSION = '1.0.1';
+  const CURRENT_APP_VERSION = '1.0.2';
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
+  const checkForUpdates = useCallback(async (manual = false) => {
+    try {
+      if (manual) showToast('جارٍ التحقق من وجود تحديثات...', 'info');
+      const res = await fetch(`https://voidtube-one.vercel.app/version.json?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.version && data.version !== CURRENT_APP_VERSION) {
+          setUpdateInfo(data);
+          setShowUpdateModal(true);
+        } else if (manual) {
+          showToast(`أنت تستخدم أحدث إصدار بالفعل (v${CURRENT_APP_VERSION}) ✨`, 'success');
+        }
+      } else if (manual) {
+        showToast('تعذر التحقق من التحديثات، تحقق من الاتصال', 'error');
+      }
+    } catch (e) {
+      console.warn('Failed to check for updates', e);
+      if (manual) showToast('تعذر الاتصال بخادم التحديثات', 'error');
+    }
+  }, [showToast]);
+
   // Check for updates on mount
   useEffect(() => {
-    const checkForUpdates = async () => {
-      try {
-        const res = await fetch(`https://voidtube-one.vercel.app/version.json?t=${Date.now()}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.version && data.version !== CURRENT_APP_VERSION) {
-            setUpdateInfo(data);
-            setShowUpdateModal(true);
-          }
-        }
-      } catch (e) {
-        console.warn('Failed to check for updates', e);
-      }
-    };
-    // Delay check slightly to not block initial render
-    setTimeout(checkForUpdates, 3000);
-  }, []);
+    const timer = setTimeout(() => checkForUpdates(false), 3000);
+    return () => clearTimeout(timer);
+  }, [checkForUpdates]);
 
   // Load offline downloads from IndexedDB
   useEffect(() => {
@@ -118,6 +134,7 @@ export function AppProvider({ children }) {
     if (!videoId || downloadingVideos.includes(videoId)) return;
 
     setDownloadingVideos(prev => [...prev, videoId]);
+    showToast('جارٍ تجهيز رابط التنزيل بجودة 720p HD...', 'info');
 
     import('../utils/downloadManager').then(({ startBackgroundDownload }) => {
       startBackgroundDownload(
@@ -128,15 +145,15 @@ export function AppProvider({ children }) {
             const filtered = prev.filter(v => v.videoId !== videoId);
             return [{ ...savedObj, savedAt: Date.now() }, ...filtered];
           });
-          // Show some native-like non-intrusive alert (optional, but UI will update)
+          showToast('بدأ تنزيل الفيديو إلى هاتفك بنجاح! 📥', 'success');
         },
         (errId) => {
           setDownloadingVideos(prev => prev.filter(id => id !== videoId));
-          console.warn('Download failed for', errId);
+          showToast('تعذر تنزيل هذا الفيديو، يرجى تجربة فيديو آخر', 'error');
         }
       );
     });
-  }, [downloadingVideos]);
+  }, [downloadingVideos, showToast]);
 
   const addDownload = useCallback((item) => {
     if (!item || !item.videoId) return;
@@ -367,6 +384,11 @@ export function AppProvider({ children }) {
         updateInfo,
         showUpdateModal,
         setShowUpdateModal,
+        checkForUpdates,
+        appToast,
+        setAppToast,
+        showToast,
+        CURRENT_APP_VERSION,
       }}
     >
       {children}

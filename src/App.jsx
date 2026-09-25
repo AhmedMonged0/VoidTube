@@ -12,6 +12,7 @@ import InstallAppBanner from './components/InstallAppBanner';
 import UpdateToast from './components/UpdateToast';
 import ApkDownloadModal from './components/ApkDownloadModal';
 import UpdateModal from './components/UpdateModal';
+import ToastNotification from './components/ToastNotification';
 import MobileBottomNav from './components/MobileBottomNav';
 import Sidebar from './components/Sidebar';
 import { Shield, Zap } from 'lucide-react';
@@ -67,6 +68,7 @@ function AppContent() {
       <UpdateToast />
       <ApkDownloadModal isOpen={isApkModalOpen} onClose={() => setIsApkModalOpen(false)} />
       <UpdateModal />
+      <ToastNotification />
 
       {/* Minimalist Cinematic Footer (Desktop view) */}
       <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16 hidden md:block">

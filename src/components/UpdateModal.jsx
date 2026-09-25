@@ -10,15 +10,25 @@ export default function UpdateModal() {
 
   const handleUpdate = () => {
     setDownloading(true);
-    // Open the direct APK link in the system browser/downloader
-    // This triggers the Android package installer smoothly
-    window.open('https://voidtube-one.vercel.app/VoidTube.apk', '_system');
-    
-    // Keep it in downloading state for a few seconds to show feedback
+    const apkUrl = 'https://voidtube-one.vercel.app/VoidTube.apk';
+    try {
+      const link = document.createElement('a');
+      link.href = apkUrl;
+      link.setAttribute('download', 'VoidTube.apk');
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {}
+
+    try {
+      window.open(apkUrl, '_system');
+    } catch (e) {}
+
     setTimeout(() => {
       setShowUpdateModal(false);
       setDownloading(false);
-    }, 3000);
+    }, 4000);
   };
 
   return (

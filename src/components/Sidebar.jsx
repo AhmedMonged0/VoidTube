@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bookmark, X, Flame, Download } from 'lucide-react';
+import { Bookmark, X, Flame, Download, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ARABIC_CATEGORIES } from './CategoryPills';
 
@@ -14,7 +14,9 @@ export default function Sidebar() {
     watchLater,
     setIsWatchLaterOpen,
     downloads,
-    setIsDownloadsOpen
+    setIsDownloadsOpen,
+    checkForUpdates,
+    CURRENT_APP_VERSION,
   } = useApp();
 
   const handleSelectCategory = (catId) => {
@@ -118,6 +120,21 @@ export default function Sidebar() {
                 )}
               </div>
             </button>
+
+            {/* Version & Update Check */}
+            <div className="mt-4 pt-3 border-t border-white/5 flex flex-col gap-1.5 px-1">
+              <div className="flex items-center justify-between text-[10px] text-void-400">
+                <span>الإصدار</span>
+                <span className="font-mono text-white/70">v{CURRENT_APP_VERSION}</span>
+              </div>
+              <button
+                onClick={() => checkForUpdates(true)}
+                className="flex items-center justify-center gap-1.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-void-400 hover:text-white text-[11px] font-medium transition-all active:scale-95"
+              >
+                <RefreshCw size={11} className="text-neon-purple" />
+                <span>فحص التحديثات</span>
+              </button>
+            </div>
           </div>
         </aside>
       )}
@@ -207,6 +224,26 @@ export default function Sidebar() {
                     {watchLater.length}
                   </span>
                 )}
+              </button>
+            </div>
+
+            {/* Version & Update check button */}
+            <div className="mt-auto pt-4 border-t border-white/10 flex flex-col gap-2">
+              <div className="flex items-center justify-between text-[11px] text-void-400 px-1">
+                <span>إصدار التطبيق</span>
+                <span className="font-mono text-white/70 bg-white/5 px-2 py-0.5 rounded-full border border-white/5">
+                  v{CURRENT_APP_VERSION}
+                </span>
+              </div>
+              <button
+                onClick={() => {
+                  setIsSidebarOpen(false);
+                  checkForUpdates(true);
+                }}
+                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-white/5 hover:bg-neon-purple/20 text-void-200 hover:text-white border border-white/5 hover:border-neon-purple/30 text-xs font-semibold transition-all active:scale-95"
+              >
+                <RefreshCw size={13} className="text-neon-purple" />
+                <span>التحقق من التحديثات</span>
               </button>
             </div>
 
