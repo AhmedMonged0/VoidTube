@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, Loader2, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
 import VideoGrid from '../components/VideoGrid';
-import { ARABIC_CATEGORIES } from '../components/CategoryPills';
+import CategoryPills, { ARABIC_CATEGORIES } from '../components/CategoryPills';
 
 export default function HomePage() {
-  const { region, selectedCategory } = useApp();
+  const { region, selectedCategory, setSelectedCategory } = useApp();
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -80,15 +80,24 @@ export default function HomePage() {
   const activeCategoryObj = ARABIC_CATEGORIES.find(c => c.id === selectedCategory);
 
   return (
-    <div className="flex flex-col gap-5 py-4 sm:py-6">
-      {/* Category header ONLY when filtered, otherwise clean video flow */}
-      {selectedCategory !== 'all' && (
-        <div className="flex items-center gap-2 pb-2 border-b border-white/[0.05]">
-          <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
-            {activeCategoryObj?.label || 'القسم المختار'}
-          </h2>
+    <div className="flex flex-col gap-4 py-2 sm:py-4">
+      {/* Interactive Top Category Pills + Refresh Bar */}
+      <div className="flex items-center justify-between gap-2.5 pb-2 border-b border-white/[0.04]">
+        <div className="flex-1 overflow-hidden">
+          <CategoryPills
+            activeCategory={selectedCategory}
+            onSelectCategory={(catId) => setSelectedCategory(catId)}
+          />
         </div>
-      )}
+        <button
+          onClick={() => fetchVideos(selectedCategory, region)}
+          disabled={loading}
+          className="shrink-0 p-2 rounded-full bg-[#14141d] hover:bg-neon-purple/20 text-void-300 hover:text-white border border-white/10 hover:border-neon-purple/30 transition-all active:scale-90 shadow-sm"
+          title="تحديث الفيديوهات"
+        >
+          <RefreshCw size={15} className={`text-neon-purple ${loading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
 
       {/* Videos Grid */}
       <VideoGrid

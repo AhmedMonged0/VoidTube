@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, UtensilsCrossed, Bookmark, Search, Download } from 'lucide-react';
+import { Home, Bookmark, Search, Download, Settings } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function MobileBottomNav() {
@@ -8,22 +8,15 @@ export default function MobileBottomNav() {
     navigateToHome, 
     watchLater, 
     setIsWatchLaterOpen, 
-    setSelectedCategory, 
     navigateToSearch,
     downloads,
-    setIsDownloadsOpen 
+    setIsDownloadsOpen,
+    isSidebarOpen,
+    setIsSidebarOpen
   } = useApp();
 
   const isHome = nav.page === 'home';
-  const isCooking = nav.page === 'home' && nav.category === 'cooking';
   const isSearch = nav.page === 'search';
-
-  const handleCookingClick = () => {
-    navigateToHome();
-    if (typeof setSelectedCategory === 'function') {
-      setSelectedCategory('cooking');
-    }
-  };
 
   const handleSearchClick = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -46,30 +39,30 @@ export default function MobileBottomNav() {
         <button
           onClick={navigateToHome}
           className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 ${
-            isHome && !isCooking
+            isHome
               ? 'text-neon-purple'
               : 'text-void-400 hover:text-void-200'
           }`}
         >
-          <div className={`p-1 rounded-xl transition-all ${isHome && !isCooking ? 'bg-neon-purple/15' : ''}`}>
-            <Home size={19} className={isHome && !isCooking ? 'text-neon-purple fill-neon-purple/20' : ''} />
+          <div className={`p-1 rounded-xl transition-all ${isHome ? 'bg-neon-purple/15' : ''}`}>
+            <Home size={19} className={isHome ? 'text-neon-purple fill-neon-purple/20' : ''} />
           </div>
           <span className="text-[10px] font-bold mt-0.5 tracking-tight">الرئيسية</span>
         </button>
 
-        {/* 2. Cooking Quick Tab */}
+        {/* 2. Search Tab */}
         <button
-          onClick={handleCookingClick}
+          onClick={handleSearchClick}
           className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 ${
-            isCooking
+            isSearch
               ? 'text-neon-purple'
               : 'text-void-400 hover:text-void-200'
           }`}
         >
-          <div className={`p-1 rounded-xl transition-all ${isCooking ? 'bg-neon-purple/15' : ''}`}>
-            <UtensilsCrossed size={19} className={isCooking ? 'text-neon-purple fill-neon-purple/20' : ''} />
+          <div className={`p-1 rounded-xl transition-all ${isSearch ? 'bg-neon-purple/15' : ''}`}>
+            <Search size={19} className={isSearch ? 'text-neon-purple' : ''} />
           </div>
-          <span className="text-[10px] font-bold mt-0.5 tracking-tight">طبخ</span>
+          <span className="text-[10px] font-bold mt-0.5 tracking-tight">بحث</span>
         </button>
 
         {/* 3. Downloads Tab */}
@@ -88,22 +81,7 @@ export default function MobileBottomNav() {
           <span className="text-[10px] font-bold mt-0.5 tracking-tight group-hover:text-emerald-400">التنزيلات</span>
         </button>
 
-        {/* 4. Search Tab */}
-        <button
-          onClick={handleSearchClick}
-          className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 ${
-            isSearch
-              ? 'text-neon-purple'
-              : 'text-void-400 hover:text-void-200'
-          }`}
-        >
-          <div className={`p-1 rounded-xl transition-all ${isSearch ? 'bg-neon-purple/15' : ''}`}>
-            <Search size={19} className={isSearch ? 'text-neon-purple' : ''} />
-          </div>
-          <span className="text-[10px] font-bold mt-0.5 tracking-tight">بحث</span>
-        </button>
-
-        {/* 5. Watch Later Tab */}
+        {/* 4. Watch Later Tab */}
         <button
           onClick={() => setIsWatchLaterOpen(true)}
           className="flex flex-col items-center justify-center py-1 px-2 rounded-2xl text-void-400 hover:text-void-200 transition-all duration-200 relative"
@@ -117,6 +95,21 @@ export default function MobileBottomNav() {
             )}
           </div>
           <span className="text-[10px] font-bold mt-0.5 tracking-tight">لاحقاً</span>
+        </button>
+
+        {/* 5. Settings Hub Tab */}
+        <button
+          onClick={() => setIsSidebarOpen(prev => !prev)}
+          className={`flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 ${
+            isSidebarOpen
+              ? 'text-neon-purple'
+              : 'text-void-400 hover:text-void-200'
+          }`}
+        >
+          <div className={`p-1 rounded-xl transition-all ${isSidebarOpen ? 'bg-neon-purple/15' : ''}`}>
+            <Settings size={19} className={isSidebarOpen ? 'text-neon-purple animate-spin-slow' : ''} />
+          </div>
+          <span className="text-[10px] font-bold mt-0.5 tracking-tight">الإعدادات</span>
         </button>
 
       </div>

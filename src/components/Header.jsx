@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Bookmark, Search, ArrowRight, X, Smartphone, Menu, Download } from 'lucide-react';
+import { Play, Bookmark, Search, ArrowRight, X, Smartphone, Download, SlidersHorizontal } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import SearchBar from './SearchBar';
 
@@ -108,10 +108,11 @@ export default function Header({ onOpenApkModal }) {
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <button
                 onClick={toggleSidebar}
-                className="p-2 rounded-xl text-void-300 hover:text-white hover:bg-white/10 transition-colors active:scale-95"
-                title="القائمة الجانبية للأقسام"
+                className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] hover:bg-neon-purple/20 text-void-300 hover:text-neon-purple border border-white/5 hover:border-neon-purple/30 transition-all active:scale-95 flex items-center gap-1.5"
+                title="مركز الإعدادات والتحكم"
               >
-                <Menu size={20} />
+                <SlidersHorizontal size={17} />
+                <span className="hidden sm:inline text-xs font-bold">الإعدادات</span>
               </button>
 
               <button

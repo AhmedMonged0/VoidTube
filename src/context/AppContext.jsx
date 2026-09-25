@@ -62,6 +62,19 @@ export function AppProvider({ children }) {
     return saved || 'EG';
   });
 
+  // Playback & App Preferences
+  const [defaultQuality, setDefaultQualityState] = useState(() => {
+    return localStorage.getItem('voidtube_default_quality') || '720p';
+  });
+
+  const [dataSaver, setDataSaverState] = useState(() => {
+    return localStorage.getItem('voidtube_data_saver') === 'true';
+  });
+
+  const [autoplayNext, setAutoplayNextState] = useState(() => {
+    return localStorage.getItem('voidtube_autoplay_next') !== 'false';
+  });
+
   // Recent Searches
   const [recentSearches, setRecentSearches] = useState(() => safeGetStorage(STORAGE_KEYS.RECENT_SEARCHES));
 
@@ -90,7 +103,7 @@ export function AppProvider({ children }) {
   }, []);
 
   // In-App Updater State
-  const CURRENT_APP_VERSION = '1.0.2';
+  const CURRENT_APP_VERSION = '1.0.3';
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -334,13 +347,52 @@ export function AppProvider({ children }) {
   const clearAllWatchLater = useCallback(() => {
     setWatchLater([]);
     safeSetStorage(STORAGE_KEYS.WATCH_LATER, []);
-  }, []);
+    showToast('تم مسح قائمة المشاهدة لاحقاً بنجاح', 'info');
+  }, [showToast]);
+
+  const clearHistory = useCallback(() => {
+    setHistory([]);
+    safeSetStorage(STORAGE_KEYS.HISTORY, []);
+    showToast('تم مسح سجل المشاهدة بنجاح 🗑️', 'info');
+  }, [showToast]);
+
+  const setDefaultQuality = useCallback((q) => {
+    setDefaultQualityState(q);
+    localStorage.setItem('voidtube_default_quality', q);
+    showToast(`تم تعيين الجودة الافتراضية إلى ${q}`, 'info');
+  }, [showToast]);
+
+  const toggleDataSaver = useCallback(() => {
+    setDataSaverState(prev => {
+      const next = !prev;
+      localStorage.setItem('voidtube_data_saver', String(next));
+      showToast(next ? 'تم تفعيل وضع توفير باقة الإنترنت 📶' : 'تم تعطيل وضع توفير باقة الإنترنت', 'info');
+      return next;
+    });
+  }, [showToast]);
+
+  const toggleAutoplayNext = useCallback(() => {
+    setAutoplayNextState(prev => {
+      const next = !prev;
+      localStorage.setItem('voidtube_autoplay_next', String(next));
+      showToast(next ? 'تم تفعيل التشغيل التلقائي للتالي ▶️' : 'تم تعطيل التشغيل التلقائي', 'info');
+      return next;
+    });
+  }, [showToast]);
+
+  const clearAppCache = useCallback(() => {
+    try {
+      sessionStorage.clear();
+      showToast('تم تفريغ الذاكرة المؤقتة بنجاح ⚡', 'success');
+    } catch(e) {}
+  }, [showToast]);
 
   // Switch Invidious Instance
   const switchInstance = useCallback((url) => {
     api.setCurrentInstance(url);
     setActiveInstance(url);
-  }, []);
+    showToast('تم تبديل السيرفر بنجاح 🚀', 'success');
+  }, [showToast]);
 
   return (
     <AppContext.Provider
@@ -383,7 +435,14 @@ export function AppProvider({ children }) {
         isVideoDownloaded,
         updateInfo,
         showUpdateModal,
-        setShowUpdateModal,
+        clearHistory,
+        defaultQuality,
+        setDefaultQuality,
+        dataSaver,
+        toggleDataSaver,
+        autoplayNext,
+        toggleAutoplayNext,
+        clearAppCache,
         checkForUpdates,
         appToast,
         setAppToast,
