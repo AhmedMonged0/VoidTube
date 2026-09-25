@@ -35,7 +35,16 @@ export default function VideoPlayer({
 
   // Initialize best format stream (prefer 720p or 360p MP4)
   useEffect(() => {
-    if (formatStreams.length > 0) {
+    if (videoData?.blob) {
+      const blobUrl = URL.createObjectURL(videoData.blob);
+      setSelectedFormat({ url: blobUrl, resolution: videoData.quality || 'Offline', container: 'mp4' });
+      setStreamError(false);
+      setUseEmbed(false);
+
+      return () => {
+        URL.revokeObjectURL(blobUrl);
+      };
+    } else if (formatStreams.length > 0) {
       const preferred = formatStreams.find(f => f.resolution === '720p' && f.container === 'mp4')
         || formatStreams.find(f => f.resolution === '360p' && f.container === 'mp4')
         || formatStreams[0];
@@ -254,9 +263,10 @@ export default function VideoPlayer({
             onToggleFullscreen={toggleFullscreen}
             isTheater={isTheater}
             onToggleTheater={onToggleTheater}
-            formats={formatStreams}
+            formats={videoData?.blob ? [selectedFormat] : formatStreams}
             currentFormat={selectedFormat}
             onSelectFormat={(fmt) => {
+              if (videoData?.blob) return;
               setSelectedFormat(fmt);
               if (videoRef.current) {
                 const prevTime = videoRef.current.currentTime;
@@ -267,7 +277,7 @@ export default function VideoPlayer({
             }}
             showControls={showControls}
             isDirectStream={true}
-            onToggleEngine={() => setUseEmbed(true)}
+            onToggleEngine={() => { if (!videoData?.blob) setUseEmbed(true); }}
           />
         </div>
       ) : (

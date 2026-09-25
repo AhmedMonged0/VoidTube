@@ -77,9 +77,16 @@ export function AppProvider({ children }) {
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
   // Offline / In-App Saved Downloads
-  const [downloads, setDownloads] = useState(() => safeGetStorage(STORAGE_KEYS.DOWNLOADS));
+  const [downloads, setDownloads] = useState([]);
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
   const [downloadModalVideo, setDownloadModalVideo] = useState(null);
+
+  // Load offline downloads from IndexedDB
+  useEffect(() => {
+    import('../utils/indexedDB').then(({ getVideos }) => {
+      getVideos().then(vids => setDownloads(vids)).catch(console.error);
+    });
+  }, []);
 
   const openDownloadModal = useCallback((video) => {
     if (!video) return;
@@ -94,29 +101,27 @@ export function AppProvider({ children }) {
     if (!item || !item.videoId) return;
     setDownloads(prev => {
       const filtered = prev.filter(v => v.videoId !== item.videoId);
-      const updated = [
-        {
-          ...item,
-          savedAt: Date.now(),
-        },
-        ...filtered
-      ];
-      safeSetStorage(STORAGE_KEYS.DOWNLOADS, updated);
+      const updated = [{ ...item, savedAt: Date.now() }, ...filtered];
       return updated;
     });
+    // Actual saving to DB happens in DownloadModal with the Blob
   }, []);
 
   const removeDownload = useCallback((videoId) => {
-    setDownloads(prev => {
-      const updated = prev.filter(v => v.videoId !== videoId);
-      safeSetStorage(STORAGE_KEYS.DOWNLOADS, updated);
-      return updated;
+    setDownloads(prev => prev.filter(v => v.videoId !== videoId));
+    import('../utils/indexedDB').then(({ getVideos, deleteVideo }) => {
+      getVideos().then(vids => {
+        const vid = vids.find(v => v.videoId === videoId);
+        if (vid) deleteVideo(vid.id);
+      });
     });
   }, []);
 
   const clearAllDownloads = useCallback(() => {
     setDownloads([]);
-    safeSetStorage(STORAGE_KEYS.DOWNLOADS, []);
+    import('../utils/indexedDB').then(({ getVideos, deleteVideo }) => {
+      getVideos().then(vids => vids.forEach(v => deleteVideo(v.id)));
+    });
   }, []);
 
   const isVideoDownloaded = useCallback((videoId) => {

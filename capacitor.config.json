@@ -3,7 +3,6 @@
   "appName": "VoidTube",
   "webDir": "dist",
   "server": {
-    "url": "https://voidtube-one.vercel.app",
     "cleartext": true,
     "allowNavigation": [
       "voidtube-one.vercel.app",

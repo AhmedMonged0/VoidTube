@@ -66,12 +66,12 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
     return `[VoidTube] ${safeTitle} (${res}).mp4`;
   };
 
-  const triggerDeviceDownload = (url, filename) => {
+  const triggerDeviceDownload = async (url, filename, metadata) => {
     if (!url) return;
     try {
+      // 1. Also try standard download as fallback or secondary
       const safeFilename = filename || 'video.mp4';
-      // Route through local same-origin proxy to ensure Windows and Android save with clean .mp4 extension and title
-      const downloadHref = `/api/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(safeFilename)}`;
+      const downloadHref = `https://voidtube-one.vercel.app/api/download-file?url=${encodeURIComponent(url)}&name=${encodeURIComponent(safeFilename)}`;
       const a = document.createElement('a');
       a.href = downloadHref;
       a.download = safeFilename;
@@ -84,9 +84,35 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
           document.body.removeChild(a);
         } catch (_) {}
       }, 500);
+
+      // 2. Save blob to IndexedDB for REAL offline play inside the app!
+      try {
+        const { saveVideo } = await import('../../utils/indexedDB');
+        const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(url)}`);
+        if (res.ok) {
+          const blob = await res.blob();
+          const videoObj = {
+            id: metadata.videoId + '_' + Date.now(),
+            videoId: metadata.videoId,
+            title: metadata.title,
+            author: metadata.author,
+            thumbnail: metadata.thumbnail,
+            blob: blob,
+            quality: metadata.quality,
+            fileSize: metadata.fileSize,
+            downloadedAt: metadata.downloadedAt
+          };
+          await saveVideo(videoObj);
+          console.log('[VoidTube] Video saved to offline IndexedDB storage!');
+          return videoObj;
+        }
+      } catch (idbErr) {
+        console.warn('Failed to save to IndexedDB', idbErr);
+      }
     } catch (e) {
       console.warn('Direct file download fallback error:', e);
     }
+    return null;
   };
 
   const handleStartDownload = async (formatType) => {
@@ -155,19 +181,32 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
       });
 
       // 1. Directly trigger native file download into phone storage
-      triggerDeviceDownload(finalUrl, filename);
-
-      // 2. Save into App's Offline Downloads Library
-      addDownload({
+      triggerDeviceDownload(finalUrl, filename, {
         videoId,
         title,
         author,
-        lengthSeconds: videoData?.lengthSeconds || 0,
         thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
         quality: qualityLabel,
         fileSize: `${targetSize} MB`,
-        url: finalUrl,
         downloadedAt: new Date().toISOString()
+      }).then(videoObj => {
+        if (videoObj) {
+          // 2. Save into App's Offline Downloads Library UI state WITH the blob!
+          addDownload(videoObj);
+        } else {
+          // Fallback if Blob fetch failed
+          addDownload({
+            videoId,
+            title,
+            author,
+            lengthSeconds: videoData?.lengthSeconds || 0,
+            thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+            quality: qualityLabel,
+            fileSize: `${targetSize} MB`,
+            url: finalUrl,
+            downloadedAt: new Date().toISOString()
+          });
+        }
       });
 
       // 3. Switch to Completed state
@@ -596,7 +635,15 @@ export default function DownloadModal({ videoData, videoId, isOpen, onClose }) {
                 type="button"
                 onClick={() => {
                   if (selectedFormat?.url && selectedFormat?.filename) {
-                    triggerDeviceDownload(selectedFormat.url, selectedFormat.filename);
+                    triggerDeviceDownload(selectedFormat.url, selectedFormat.filename, {
+                      videoId,
+                      title,
+                      author,
+                      thumbnail: `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`,
+                      quality: selectedFormat.label,
+                      fileSize: selectedFormat.size,
+                      downloadedAt: new Date().toISOString()
+                    });
                   }
                 }}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-lg shadow-emerald-500/25 transition-all active:scale-95 text-center"
