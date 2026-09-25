@@ -1,64 +1,48 @@
-import { saveVideo } from './indexedDB';
-
 export async function startBackgroundDownload(video, onComplete, onError) {
   const videoId = video.videoId || video.id;
   const title = video.title || 'VoidTube Video';
-  const author = video.author || video.authorName || 'VoidTube Channel';
-  const thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
-  
-  // Try to find a direct stream from video object if available
+
+  // 1. Try to get direct format stream first
   const formatStreams = video.formatStreams || [];
   const hdStream = formatStreams.find(f => f.resolution === '720p' && f.container === 'mp4') || formatStreams.find(f => f.resolution === '720p');
-  const sdStream = formatStreams.find(f => f.resolution === '360p' && f.container === 'mp4') || formatStreams.find(f => f.resolution === '360p') || formatStreams[0];
   
-  const directUrl = hdStream?.url || sdStream?.url;
-  let finalUrl = directUrl;
+  let finalUrl = hdStream?.url;
 
-  const fetchApiSafe = async (action, extraParams = {}) => {
-    const endpoints = [
-      () => {
-        const qs = new URLSearchParams({ action, ...extraParams }).toString();
-        return `https://voidtube-one.vercel.app/api/download?${qs}`;
-      },
-      () => {
-        if (action === 'init') {
-          const raw = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=${extraParams.format || '720'}&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${extraParams.videoId}`)}`;
-          return `https://corsproxy.io/?url=${encodeURIComponent(raw)}`;
-        } else {
-          return `https://corsproxy.io/?url=${encodeURIComponent(extraParams.url)}`;
-        }
-      }
-    ];
-
-    for (const getUrl of endpoints) {
-      try {
-        const r = await fetch(getUrl());
-        if (r.ok) {
-          const d = await r.json();
-          if (d && (d.progress_url || d.download_url || d.id || d.success !== undefined)) return d;
-        }
-      } catch (_) {}
-    }
-    return null;
-  };
-
-  if (!finalUrl || !finalUrl.includes('.googlevideo.com')) {
-    // Need to get direct URL from API
+  if (finalUrl && finalUrl.includes('.googlevideo.com')) {
+    // If it's a direct stream, we can pass it to Android.
+    // However, googlevideo.com might not trigger a download in the browser, just playback.
+    // So we append a dummy parameter or just use it.
+    finalUrl = finalUrl + '&dl=1';
+  } else {
+    // 2. Fetch using loader.to API
     try {
-      const initData = await fetchApiSafe('init', { videoId, format: '720' });
-      if (initData) {
-        if (initData.download_url) {
-          finalUrl = initData.download_url;
-        } else if (initData.progress_url || initData.id) {
+      // Init download
+      const initUrl = `https://loader.to/ajax/download.php?button=1&start=1&end=1&format=720&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`)}`;
+      const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(initUrl)}`);
+      
+      if (res.ok) {
+        const initData = await res.json();
+        
+        if (initData && (initData.progress_url || initData.id)) {
           const pollUrl = initData.progress_url || `https://lto2.affadaffa.com/api/progress?id=${initData.id}`;
+          
+          // Poll until download_url is ready
           for (let i = 0; i < 30; i++) {
-            await new Promise(r => setTimeout(r, 1100));
-            const pData = await fetchApiSafe('progress', { url: pollUrl });
-            if (pData?.download_url && pData.success === 1) {
-              finalUrl = pData.download_url;
-              break;
+            await new Promise(r => setTimeout(r, 1000));
+            try {
+              const pRes = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(pollUrl)}`);
+              const pData = await pRes.json();
+              
+              if (pData?.download_url && pData.success === 1) {
+                finalUrl = pData.download_url;
+                break;
+              }
+            } catch (err) {
+              console.warn('Poll error:', err);
             }
           }
+        } else if (initData?.download_url) {
+          finalUrl = initData.download_url;
         }
       }
     } catch (e) {
@@ -66,35 +50,35 @@ export async function startBackgroundDownload(video, onComplete, onError) {
     }
   }
 
+  // 3. Fallback: Our own Next.js API
+  if (!finalUrl) {
+    try {
+      const qs = new URLSearchParams({ action: 'init', videoId, format: '720' }).toString();
+      const apiRes = await fetch(`https://voidtube-one.vercel.app/api/download?${qs}`);
+      const apiData = await apiRes.json();
+      if (apiData?.download_url) finalUrl = apiData.download_url;
+    } catch(e) {}
+  }
+
+  // 4. Give up or Trigger Download
   if (!finalUrl) {
     if (onError) onError(videoId);
     return;
   }
 
-  // Now we have finalUrl, fetch the blob and save to IndexedDB
-  try {
-    const res = await fetch(`https://corsproxy.io/?url=${encodeURIComponent(finalUrl)}`);
-    if (res.ok) {
-      const blob = await res.blob();
-      const videoObj = {
-        id: videoId + '_' + Date.now(),
-        videoId,
-        title,
-        author,
-        thumbnail,
-        blob,
-        quality: hdStream ? '720p HD' : '360p MP4',
-        fileSize: 'Video',
-        url: finalUrl,
-        downloadedAt: new Date().toISOString()
-      };
-      await saveVideo(videoObj);
-      if (onComplete) onComplete(videoObj);
-      return;
-    }
-  } catch (err) {
-    console.warn('Blob fetch failed:', err);
+  // THIS IS THE MAGIC FOR ANDROID NATIVE DOWNLOAD
+  // It opens the link in the system browser/downloader outside the webview.
+  // The system browser will immediately download it to the Downloads folder
+  // and show the native Android notification!
+  window.open(finalUrl, '_system');
+
+  if (onComplete) {
+    onComplete({
+      videoId,
+      title,
+      quality: '720p HD',
+      url: finalUrl,
+      downloadedAt: new Date().toISOString()
+    });
   }
-  
-  if (onError) onError(videoId);
 }
