@@ -103,7 +103,7 @@ export function AppProvider({ children }) {
   }, []);
 
   // In-App Updater State
-  const CURRENT_APP_VERSION = '1.0.5';
+  const CURRENT_APP_VERSION = '1.0.6';
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 

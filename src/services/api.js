@@ -4,6 +4,99 @@ import { INVIDIOUS_INSTANCES, DEFAULT_INSTANCE } from './instances';
 const cache = new Map();
 const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
 
+// Rolling session seen IDs tracker (Anti-Repetition system)
+const SEEN_VIDEOS_SESSION_KEY = 'voidtube_seen_videos_v1';
+function getSeenVideoIds() {
+  try {
+    const raw = sessionStorage.getItem(SEEN_VIDEOS_SESSION_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+function addSeenVideoIds(newIds) {
+  try {
+    const existing = getSeenVideoIds();
+    const combined = Array.from(new Set([...existing, ...newIds])).slice(-150);
+    sessionStorage.setItem(SEEN_VIDEOS_SESSION_KEY, JSON.stringify(combined));
+  } catch {}
+}
+
+let sessionSeedOffset = Math.floor(Math.random() * 50);
+
+export const REGIONAL_TOPIC_POOLS = {
+  EG: [
+    // 1. Hot Trending & Viral
+    { query: 'تريند مصر اليوم رائج', sort: 'relevance' },
+    { query: 'فيديوهات جديدة رائج مصر', sort: 'upload_date' },
+    { query: 'لقاءات المشاهير وبرامج توك شو', sort: 'view_count' },
+    // 2. Top-tier Egyptian Podcasts & Real Stories
+    { query: 'بودكاست مصري جديد حوارات', sort: 'relevance' },
+    { query: 'بودكاست إبراهيم فايق الجديد حوار', sort: 'relevance' },
+    { query: 'فنجان بودكاست إذاعة ثمانية', sort: 'relevance' },
+    { query: 'حكايات وقصص واقعية وتاريخية', sort: 'view_count' },
+    // 3. Street Life, Vlogs & Exploration
+    { query: 'فلوجات شوارع مصر وجولات', sort: 'relevance' },
+    { query: 'جو حطاب جولات واستكشاف وسفر', sort: 'relevance' },
+    { query: 'أكل شوارع وتجارب مطاعم مصرية', sort: 'relevance' },
+    { query: 'تحدي 24 ساعة فلوج مصر', sort: 'relevance' },
+    { query: 'أماكن سرية وغريبة في مصر جولات', sort: 'relevance' },
+    // 4. Knowledge, Science & Deep Dives
+    { query: 'الدحيح حلقات جديدة علوم ومعرفة', sort: 'relevance' },
+    { query: 'وثائقيات تاريخية وعلمية شيقة بالعربي', sort: 'relevance' },
+    { query: 'حقائق ومعلومات مذهلة حول العالم', sort: 'view_count' },
+    { query: 'قصص نجاح شركات واقتصاد عالمي', sort: 'relevance' },
+    // 5. Comedy & Egyptian Entertainment
+    { query: 'كوميديا مصرية مواقف واسكتشات جديدة', sort: 'relevance' },
+    { query: 'اسكتشات مضحكة جديدة مصر', sort: 'upload_date' },
+    { query: 'مقالب وتحديات مسلية مضحكة', sort: 'relevance' },
+    { query: 'ستاند اب كوميدي مصري مضحك', sort: 'relevance' },
+    // 6. Food, Gourmet & Fast Cooking
+    { query: 'اكلات مصرية طبخ سهلة وسريعة', sort: 'relevance' },
+    { query: 'وصفات شيف سريعة نادية السيد', sort: 'relevance' },
+    { query: 'حلويات شرقية ووصفات بيت سهلة', sort: 'relevance' },
+    // 7. Football & Sports Highlights
+    { query: 'ملخص اهداف مباريات اليوم الدوري', sort: 'upload_date' },
+    { query: 'أهداف الأهلي والزمالك ملخصات', sort: 'relevance' },
+    { query: 'تحليل كروي ممتع وأهداف عالمية', sort: 'relevance' },
+    { query: 'مهارات ولقطات كرة قدم أسطورية', sort: 'view_count' },
+    // 8. Cinema, Series & Movie Recaps
+    { query: 'ملخصات افلام ومسلسلات سينما جديدة', sort: 'relevance' },
+    { query: 'مراجعة فيلم جديد سينمائي بدون حرق', sort: 'relevance' },
+    { query: 'أقوى أفلام سينمائية ملخص أكشن', sort: 'view_count' },
+    // 9. Tech & Gaming
+    { query: 'مراجعات هواتف ذكية وتكنولوجيا جديدة', sort: 'upload_date' },
+    { query: 'جيمنج عربي مضحك وتحديات', sort: 'relevance' },
+    { query: 'العاب رعب ومغامرات تختيم', sort: 'relevance' }
+  ],
+  SA: [
+    { query: 'تريند السعودية اليوم رائج', sort: 'relevance' },
+    { query: 'بودكاست فنجان ثمانية جديد حوار', sort: 'relevance' },
+    { query: 'فلوجات الرياض وجدة ومغامرات', sort: 'relevance' },
+    { query: 'دوري روشن السعودي ملخص واهداف', sort: 'upload_date' },
+    { query: 'تحديات سيارات وسفر ومقالب', sort: 'relevance' },
+    { query: 'تقنية وهواتف ذكية مراجعة جديدة', sort: 'upload_date' },
+    { query: 'يوميات وتحديات سعودية مسلية', sort: 'relevance' },
+    { query: 'وثائقيات سعودية وعربية تاريخية', sort: 'view_count' }
+  ],
+  AR: [
+    { query: 'فيديوهات عربية رائجة اليوم تريند', sort: 'relevance' },
+    { query: 'وثائقيات شيقة بالعربي تاريخية', sort: 'relevance' },
+    { query: 'فلوجات سفر حول العالم بالعربي', sort: 'relevance' },
+    { query: 'بودكاست عربي ملهم تجارب حقيقية', sort: 'relevance' },
+    { query: 'تحديات ومقالب عربية ترفيهية', sort: 'relevance' },
+    { query: 'اكتشافات وحقائق علمية مذهلة', sort: 'view_count' },
+    { query: 'ملخص مباريات عالمية اليوم أهداف', sort: 'upload_date' }
+  ],
+  US: [
+    { query: 'trending videos today', sort: 'relevance' },
+    { query: 'interesting documentary stories', sort: 'relevance' },
+    { query: 'viral entertainment highlights', sort: 'relevance' },
+    { query: 'tech reviews latest innovations', sort: 'upload_date' },
+    { query: 'popular podcasts and comedy sketches', sort: 'view_count' }
+  ]
+};
+
 class InvidiousApiService {
   constructor() {
     const saved = localStorage.getItem('voidtube_preferred_instance');
@@ -111,83 +204,115 @@ class InvidiousApiService {
    * Get Trending Videos with region support
    */
   async getTrending(region = 'EG') {
-    return this.fetchWithFallback('/api/v1/trending', { region, hl: 'ar' });
+    return this.fetchWithFallback('/api/v1/trending', { region, hl: 'ar' }, { timeoutMs: 3500 });
   }
 
   /**
-   * Get Rich, Diverse Egyptian Everyday Feed (Cooking, Vlogs, Podcasts, Culture, Comedy)
+   * Dynamic, Rotating Feed Generator with Anti-Repetition Intelligence
    */
-  async getExploreFeed({ region = 'EG', page = 1 } = {}) {
-    if (region === 'EG') {
-      // Curated diverse Egyptian topics for everyday viewing
-      const egyptianTopics = [
-        'اكلات مصرية طبخ سهلة',
-        'فلوجات مصر جولات',
-        'بودكاست مصري حوار',
-        'الدحيح معرفة',
-        'كوميديا مصرية مواقف',
-        'ملخص اهداف الدوري المصري'
-      ];
+  async getExploreFeed({ region = 'EG', page = 1, forceRefresh = false } = {}) {
+    const pool = REGIONAL_TOPIC_POOLS[region] || REGIONAL_TOPIC_POOLS.EG;
+    const poolLen = pool.length;
 
-      try {
-        // Fetch topics in parallel with pagination support
-        const topicIndex = (page - 1) % egyptianTopics.length;
-        const selectedTopics = [
-          egyptianTopics[topicIndex],
-          egyptianTopics[(topicIndex + 1) % egyptianTopics.length],
-          egyptianTopics[(topicIndex + 2) % egyptianTopics.length]
-        ];
+    // Advance session offset on refresh or initial load to ensure totally new topics each time
+    if (forceRefresh) {
+      sessionSeedOffset = (sessionSeedOffset + 7 + Math.floor(Math.random() * 5)) % poolLen;
+    }
 
-        const fetchPage = Math.floor((page - 1) / egyptianTopics.length) + 1;
+    // Step by 5 across the topic pool so each request draws from completely different genres
+    const step = 5;
+    const baseIndex = (sessionSeedOffset + (page - 1) * 3) % poolLen;
 
-        const results = await Promise.allSettled(
-          selectedTopics.map(q => this.searchVideos(q, 'video', fetchPage))
-        );
+    const selectedTopics = [
+      pool[baseIndex],
+      pool[(baseIndex + step) % poolLen],
+      pool[(baseIndex + step * 2) % poolLen],
+      pool[(baseIndex + step * 3) % poolLen],
+    ];
 
-        const combined = [];
-        const seen = new Set();
+    try {
+      const fetchPage = Math.floor((page - 1) / 2) + 1;
+      const fetchPromises = selectedTopics.map(t => 
+        this.searchVideos(t.query, 'video', fetchPage, {
+          sortBy: t.sort,
+          region,
+          bypassCache: forceRefresh
+        })
+      );
 
-        const lists = results
-          .filter(r => r.status === 'fulfilled' && Array.isArray(r.value))
-          .map(r => r.value);
+      // On page 1, also attempt to mix in authentic live trending videos
+      if (page === 1) {
+        fetchPromises.push(this.getTrending(region).catch(() => []));
+      }
 
-        const maxLen = Math.max(...lists.map(l => l.length), 0);
+      const results = await Promise.allSettled(fetchPromises);
 
-        // Interleave topics for a balanced, vibrant feed
-        for (let i = 0; i < maxLen; i++) {
-          for (const list of lists) {
-            if (list[i]) {
-              const id = list[i].videoId || list[i].id;
-              if (id && !seen.has(id)) {
-                seen.add(id);
-                combined.push(list[i]);
-              }
+      const lists = results
+        .filter(r => r.status === 'fulfilled' && Array.isArray(r.value))
+        .map(r => r.value);
+
+      const combined = [];
+      const seen = new Set();
+      const maxLen = Math.max(...lists.map(l => l.length), 0);
+
+      // Interleave topics smoothly for a natural, rich YouTube-like stream
+      for (let i = 0; i < maxLen; i++) {
+        for (const list of lists) {
+          if (list[i]) {
+            const id = list[i].videoId || list[i].id;
+            if (id && !seen.has(id)) {
+              seen.add(id);
+              combined.push(list[i]);
             }
           }
         }
-
-        if (combined.length > 0) return combined;
-      } catch (err) {
-        console.warn('[VoidTube] Interleaved Egyptian feed error, fallback to search:', err);
       }
+
+      // Anti-Repetition Filter: prioritize videos the user hasn't seen yet in this session
+      const sessionSeenSet = new Set(getSeenVideoIds());
+      const freshVideos = [];
+      const previouslySeenVideos = [];
+
+      for (const item of combined) {
+        const id = item.videoId || item.id;
+        if (sessionSeenSet.has(id)) {
+          previouslySeenVideos.push(item);
+        } else {
+          freshVideos.push(item);
+        }
+      }
+
+      // Unseen fresh videos take front priority!
+      const ordered = [...freshVideos, ...previouslySeenVideos];
+
+      // Record shown video IDs into session storage
+      const newlyShownIds = ordered.slice(0, 24).map(v => v.videoId || v.id).filter(Boolean);
+      addSeenVideoIds(newlyShownIds);
+
+      if (ordered.length > 0) return ordered;
+    } catch (err) {
+      console.warn('[VoidTube] Dynamic feed error, fallback to broad search:', err);
     }
 
     // Default fallback
-    return this.searchVideos(region === 'EG' ? 'محتوى مصري' : 'trending', 'video', page);
+    return this.searchVideos(region === 'EG' ? 'تريند مصر اليوم' : 'trending', 'video', page, { bypassCache: forceRefresh });
   }
 
   /**
-   * Search Videos
+   * Search Videos with sorting, date, and region options
    */
-  async searchVideos(query, type = 'video', page = 1) {
+  async searchVideos(query, type = 'video', page = 1, options = {}) {
     if (!query || !query.trim()) return [];
-    return this.fetchWithFallback('/api/v1/search', {
+    const params = {
       q: query.trim(),
       type,
       page,
       hl: 'ar',
-      region: 'EG'
-    });
+      region: options.region || 'EG'
+    };
+    if (options.sortBy) params.sort_by = options.sortBy;
+    if (options.date) params.date = options.date;
+    return this.fetchWithFallback('/api/v1/search', params, options);
   }
 
   /**
