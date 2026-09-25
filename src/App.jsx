@@ -11,13 +11,13 @@ import InstanceSelectorModal from './components/InstanceSelectorModal';
 import InstallAppBanner from './components/InstallAppBanner';
 import UpdateToast from './components/UpdateToast';
 import ApkDownloadModal from './components/ApkDownloadModal';
-import DownloadModal from './components/Player/DownloadModal';
+import UpdateModal from './components/UpdateModal';
 import MobileBottomNav from './components/MobileBottomNav';
 import Sidebar from './components/Sidebar';
 import { Shield, Zap } from 'lucide-react';
 
 function AppContent() {
-  const { nav, downloadModalVideo, closeDownloadModal } = useApp();
+  const { nav } = useApp();
   const [isApkModalOpen, setIsApkModalOpen] = useState(false);
 
   useEffect(() => {
@@ -66,14 +66,7 @@ function AppContent() {
       <InstallAppBanner onOpenApkModal={() => setIsApkModalOpen(true)} />
       <UpdateToast />
       <ApkDownloadModal isOpen={isApkModalOpen} onClose={() => setIsApkModalOpen(false)} />
-      {downloadModalVideo && (
-        <DownloadModal
-          videoData={downloadModalVideo}
-          videoId={downloadModalVideo.videoId || downloadModalVideo.id}
-          isOpen={!!downloadModalVideo}
-          onClose={closeDownloadModal}
-        />
-      )}
+      <UpdateModal />
 
       {/* Minimalist Cinematic Footer (Desktop view) */}
       <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16 hidden md:block">

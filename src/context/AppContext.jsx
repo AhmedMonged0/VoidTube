@@ -76,10 +76,34 @@ export function AppProvider({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
-  // Offline / In-App Saved Downloads
   const [downloads, setDownloads] = useState([]);
   const [isDownloadsOpen, setIsDownloadsOpen] = useState(false);
   const [downloadingVideos, setDownloadingVideos] = useState([]); // List of videoIds currently downloading
+  
+  // In-App Updater State
+  const CURRENT_APP_VERSION = '1.0.1';
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+  // Check for updates on mount
+  useEffect(() => {
+    const checkForUpdates = async () => {
+      try {
+        const res = await fetch(`https://voidtube-one.vercel.app/version.json?t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.version && data.version !== CURRENT_APP_VERSION) {
+            setUpdateInfo(data);
+            setShowUpdateModal(true);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to check for updates', e);
+      }
+    };
+    // Delay check slightly to not block initial render
+    setTimeout(checkForUpdates, 3000);
+  }, []);
 
   // Load offline downloads from IndexedDB
   useEffect(() => {
@@ -340,6 +364,9 @@ export function AppProvider({ children }) {
         removeDownload,
         clearAllDownloads,
         isVideoDownloaded,
+        updateInfo,
+        showUpdateModal,
+        setShowUpdateModal,
       }}
     >
       {children}
