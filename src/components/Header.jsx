@@ -12,34 +12,9 @@ export default function Header({ onOpenApkModal }) {
     downloads,
     setIsDownloadsOpen,
     navigateToSearch,
-    toggleSidebar
+    toggleSidebar,
+    setIsMobileSearchOpen,
   } = useApp();
-
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [mobileQuery, setMobileQuery] = useState(nav.query || '');
-  const mobileInputRef = useRef(null);
-
-  // Focus mobile input when mobile search opens
-  useEffect(() => {
-    if (mobileSearchOpen) {
-      setTimeout(() => mobileInputRef.current?.focus(), 50);
-    }
-  }, [mobileSearchOpen]);
-
-  // Keep mobile query synced
-  useEffect(() => {
-    if (nav.page === 'search') {
-      setMobileQuery(nav.query || '');
-    }
-  }, [nav.page, nav.query]);
-
-  const handleMobileSearchSubmit = (e) => {
-    e.preventDefault();
-    if (mobileQuery.trim()) {
-      setMobileSearchOpen(false);
-      navigateToSearch(mobileQuery.trim());
-    }
-  };
 
   const triggerApkModal = () => {
     if (onOpenApkModal) {
@@ -53,59 +28,8 @@ export default function Header({ onOpenApkModal }) {
     <header className="sticky top-0 z-40 w-full bg-[#0a0a0c]/90 backdrop-blur-xl border-b border-white/[0.06] transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-2 sm:gap-6">
         
-        {/* =========================================
-            MOBILE SEARCH BAR OVERLAY (When activated)
-           ========================================= */}
-        {mobileSearchOpen ? (
-          <form 
-            onSubmit={handleMobileSearchSubmit} 
-            className="flex md:hidden items-center w-full gap-2 animate-fade-in"
-            dir="rtl"
-          >
-            <button
-              type="button"
-              onClick={() => setMobileSearchOpen(false)}
-              className="p-2 rounded-full text-void-400 hover:text-white bg-white/5 active:scale-95"
-              title="رجوع"
-            >
-              <ArrowRight size={18} />
-            </button>
-
-            <div className="relative flex-1 flex items-center">
-              <input
-                ref={mobileInputRef}
-                type="text"
-                value={mobileQuery}
-                onChange={(e) => setMobileQuery(e.target.value)}
-                placeholder="ابحث في فيديوهات مصر والعالم..."
-                className="w-full bg-[#161620] text-white text-xs sm:text-sm rounded-full pl-9 pr-4 py-2 border border-neon-purple/40 focus:outline-none focus:ring-1 focus:ring-neon-purple"
-              />
-              {mobileQuery && (
-                <button
-                  type="button"
-                  onClick={() => { setMobileQuery(''); mobileInputRef.current?.focus(); }}
-                  className="absolute left-2.5 p-1 text-void-400 hover:text-white"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              disabled={!mobileQuery.trim()}
-              className="px-3.5 py-2 bg-neon-purple text-white text-xs font-bold rounded-full disabled:opacity-40 shrink-0 shadow-neon-purple"
-            >
-              بحث
-            </button>
-          </form>
-        ) : (
-          /* =========================================
-             STANDARD HEADER (Desktop & Mobile Normal)
-             ========================================= */
-          <>
-            {/* Left: Hamburger Menu & Brand Logo */}
-            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+        {/* Left: Hamburger Menu & Brand Logo */}
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
               <button
                 onClick={toggleSidebar}
                 className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] hover:bg-neon-purple/20 text-void-300 hover:text-neon-purple border border-white/5 hover:border-neon-purple/30 transition-all active:scale-95 flex items-center gap-1.5"
@@ -146,7 +70,7 @@ export default function Header({ onOpenApkModal }) {
               
               {/* Mobile Search Toggle Button */}
               <button
-                onClick={() => setMobileSearchOpen(true)}
+                onClick={() => setIsMobileSearchOpen(true)}
                 className="md:hidden p-2 rounded-full bg-[#141419] border border-white/10 text-void-300 hover:text-white transition-all"
                 title="بحث"
               >
@@ -208,8 +132,6 @@ export default function Header({ onOpenApkModal }) {
               </button>
 
             </div>
-          </>
-        )}
 
       </div>
     </header>

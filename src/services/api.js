@@ -317,34 +317,105 @@ class InvidiousApiService {
 
   /**
    * Get Live Search Suggestions (Autocomplete)
+   * Uses YouTube JSONP as primary for 0 CORS restriction across Web and Android WebView,
+   * with fallbacks to Invidious and direct fetch.
    */
   async getSuggestions(query) {
     if (!query || !query.trim()) return [];
     const cleanQuery = query.trim();
 
-    // 1. Try Invidious API suggestions endpoint
+    // In-memory cache check
+    if (!this._suggestionCache) this._suggestionCache = new Map();
+    if (this._suggestionCache.has(cleanQuery)) {
+      return this._suggestionCache.get(cleanQuery);
+    }
+
+    // 1. Primary: YouTube JSONP (Bypasses all CORS limitations in Android WebView & browsers)
     try {
-      const data = await this.fetchWithFallback('/api/v1/search/suggestions', { q: cleanQuery, hl: 'ar' }, { timeoutMs: 2500 });
-      if (data && Array.isArray(data.suggestions)) {
+      const jsonpList = await new Promise((resolve) => {
+        if (typeof window === 'undefined' || typeof document === 'undefined') {
+          return resolve(null);
+        }
+        const cbName = 'voidtube_sug_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now();
+        const script = document.createElement('script');
+        let timer = setTimeout(() => {
+          cleanup();
+          resolve(null);
+        }, 1800);
+
+        function cleanup() {
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+          try {
+            delete window[cbName];
+          } catch {}
+          if (script && script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+        }
+
+        window[cbName] = (data) => {
+          cleanup();
+          try {
+            if (Array.isArray(data) && Array.isArray(data[1])) {
+              const list = data[1]
+                .map(item => (Array.isArray(item) ? item[0] : item))
+                .filter(item => typeof item === 'string' && item.trim().length > 0);
+              resolve(list);
+            } else {
+              resolve(null);
+            }
+          } catch {
+            resolve(null);
+          }
+        };
+
+        script.onerror = () => {
+          cleanup();
+          resolve(null);
+        };
+
+        script.src = `https://suggestqueries.google.com/complete/search?client=youtube&hl=ar&gl=eg&q=${encodeURIComponent(cleanQuery)}&jsonp=${cbName}`;
+        document.head.appendChild(script);
+      });
+
+      if (Array.isArray(jsonpList) && jsonpList.length > 0) {
+        if (this._suggestionCache.size > 150) this._suggestionCache.clear();
+        this._suggestionCache.set(cleanQuery, jsonpList);
+        return jsonpList;
+      }
+    } catch (e) {
+      console.warn('[VoidTube] JSONP suggestions failed:', e);
+    }
+
+    // 2. Invidious API fallback
+    try {
+      const data = await this.fetchWithFallback('/api/v1/search/suggestions', { q: cleanQuery, hl: 'ar' }, { timeoutMs: 2000 });
+      if (data && Array.isArray(data.suggestions) && data.suggestions.length > 0) {
+        this._suggestionCache.set(cleanQuery, data.suggestions);
         return data.suggestions;
       }
     } catch (e) {
       console.warn('[VoidTube] Invidious suggestions fallback:', e);
     }
 
-    // 2. Direct fallback to YouTube Suggest endpoint
+    // 3. DuckDuckGo / Direct Fetch fallback
     try {
-      const res = await fetch(`https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&hl=ar&gl=eg&q=${encodeURIComponent(cleanQuery)}`, {
-        signal: AbortSignal.timeout(2500)
+      const res = await fetch(`https://duckduckgo.com/ac/?q=${encodeURIComponent(cleanQuery)}&type=list`, {
+        signal: AbortSignal.timeout(1500)
       });
       if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data) && Array.isArray(data[1])) {
-          return data[1];
+        const ddgData = await res.json();
+        if (Array.isArray(ddgData) && Array.isArray(ddgData[1]) && ddgData[1].length > 0) {
+          const list = ddgData[1];
+          this._suggestionCache.set(cleanQuery, list);
+          return list;
         }
       }
     } catch (err) {
-      console.warn('[VoidTube] YouTube fallback suggestions failed:', err);
+      console.warn('[VoidTube] DDG fallback suggestions failed:', err);
     }
 
     return [];

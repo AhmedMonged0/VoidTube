@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { App as CapApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 import api from '../services/api';
 
 const AppContext = createContext(null);
@@ -89,6 +91,9 @@ export function AppProvider({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const toggleSidebar = useCallback(() => setIsSidebarOpen(prev => !prev), []);
 
+  // Mobile Fullscreen Search Overlay state
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+
   // Mini Player State (YouTube-like floating player)
   const [miniPlayer, setMiniPlayer] = useState(null); // { videoId, videoData } | null
 
@@ -124,7 +129,7 @@ export function AppProvider({ children }) {
   }, []);
 
   // In-App Updater State
-  const CURRENT_APP_VERSION = '1.0.8';
+  const CURRENT_APP_VERSION = '1.0.9';
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -376,6 +381,98 @@ export function AppProvider({ children }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  // Keep live references for Android hardware back button handler
+  const navRef = useRef(nav);
+  const isMobileSearchOpenRef = useRef(isMobileSearchOpen);
+  const showUpdateModalRef = useRef(showUpdateModal);
+  const isSidebarOpenRef = useRef(isSidebarOpen);
+  const isDownloadsOpenRef = useRef(isDownloadsOpen);
+  const isWatchLaterOpenRef = useRef(isWatchLaterOpen);
+  const isInstanceModalOpenRef = useRef(isInstanceModalOpen);
+
+  useEffect(() => { navRef.current = nav; }, [nav]);
+  useEffect(() => { isMobileSearchOpenRef.current = isMobileSearchOpen; }, [isMobileSearchOpen]);
+  useEffect(() => { showUpdateModalRef.current = showUpdateModal; }, [showUpdateModal]);
+  useEffect(() => { isSidebarOpenRef.current = isSidebarOpen; }, [isSidebarOpen]);
+  useEffect(() => { isDownloadsOpenRef.current = isDownloadsOpen; }, [isDownloadsOpen]);
+  useEffect(() => { isWatchLaterOpenRef.current = isWatchLaterOpen; }, [isWatchLaterOpen]);
+  useEffect(() => { isInstanceModalOpenRef.current = isInstanceModalOpen; }, [isInstanceModalOpen]);
+
+  // Intercept Android Native Hardware Back Button
+  useEffect(() => {
+    let listenerHandle = null;
+
+    const setupBackButton = async () => {
+      try {
+        listenerHandle = await CapApp.addListener('backButton', () => {
+          // 1. Close mobile search overlay if open
+          if (isMobileSearchOpenRef.current) {
+            setIsMobileSearchOpen(false);
+            return;
+          }
+
+          // 2. Close update modal if open
+          if (showUpdateModalRef.current) {
+            setShowUpdateModal(false);
+            return;
+          }
+
+          // 3. Close instance modal if open
+          if (isInstanceModalOpenRef.current) {
+            setIsInstanceModalOpen(false);
+            return;
+          }
+
+          // 4. Close settings/sidebar if open
+          if (isSidebarOpenRef.current) {
+            setIsSidebarOpen(false);
+            return;
+          }
+
+          // 5. Close downloads drawer if open
+          if (isDownloadsOpenRef.current) {
+            setIsDownloadsOpen(false);
+            return;
+          }
+
+          // 6. Close watch later drawer if open
+          if (isWatchLaterOpenRef.current) {
+            setIsWatchLaterOpen(false);
+            return;
+          }
+
+          // 7. If currently on watch page: minimize to floating miniplayer and return to home
+          if (navRef.current.page === 'watch') {
+            if (navRef.current.videoId) {
+              showMiniPlayer(navRef.current.videoId, navRef.current.videoData);
+            }
+            navigateToHome();
+            return;
+          }
+
+          // 8. If on search or bookmarks, return to home
+          if (navRef.current.page !== 'home') {
+            navigateToHome();
+            return;
+          }
+
+          // 9. When on the Home Screen with no overlays open -> EXIT APP!
+          CapApp.exitApp();
+        });
+      } catch (err) {
+        console.warn('Capacitor backButton setup failed:', err);
+      }
+    };
+
+    setupBackButton();
+
+    return () => {
+      if (listenerHandle && typeof listenerHandle.remove === 'function') {
+        listenerHandle.remove();
+      }
+    };
+  }, [navigateToHome, showMiniPlayer]);
+
   // Watch Later actions
   const toggleWatchLater = useCallback((video) => {
     const id = video.videoId || video.id;
@@ -498,6 +595,8 @@ export function AppProvider({ children }) {
         isSidebarOpen,
         setIsSidebarOpen,
         toggleSidebar,
+        isMobileSearchOpen,
+        setIsMobileSearchOpen,
         downloads,
         isDownloadsOpen,
         setIsDownloadsOpen,

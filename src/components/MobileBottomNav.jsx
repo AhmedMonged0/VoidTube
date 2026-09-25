@@ -12,20 +12,15 @@ export default function MobileBottomNav() {
     downloads,
     setIsDownloadsOpen,
     isSidebarOpen,
-    setIsSidebarOpen
+    setIsSidebarOpen,
+    setIsMobileSearchOpen
   } = useApp();
 
   const isHome = nav.page === 'home';
   const isSearch = nav.page === 'search';
 
   const handleSearchClick = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    const searchBtn = document.querySelector('header button[title="بحث"]');
-    if (searchBtn) {
-      searchBtn.click();
-    } else {
-      navigateToSearch('');
-    }
+    setIsMobileSearchOpen(true);
   };
 
   return (
