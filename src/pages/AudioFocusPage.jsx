@@ -22,7 +22,8 @@ import {
   Loader2,
   X,
   Plus,
-  Compass
+  Compass,
+  ArrowUpRight
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import api from '../services/api';
@@ -99,11 +100,47 @@ export default function AudioFocusPage() {
   const [loadingStream, setLoadingStream] = useState(false);
   const [useFallbackEmbed, setUseFallbackEmbed] = useState(false);
 
-  // Search state
+  // Search & Suggestions state
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchContainerRef = useRef(null);
+  const searchDebounceRef = useRef(null);
+
+  // Fetch live suggestions on user type in music search
+  useEffect(() => {
+    clearTimeout(searchDebounceRef.current);
+    const clean = searchQuery.trim();
+    if (!clean) {
+      setSuggestions([]);
+      return;
+    }
+
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const list = await api.getSuggestions(clean);
+        setSuggestions(Array.isArray(list) ? list : []);
+      } catch (err) {
+        setSuggestions([]);
+      }
+    }, 140);
+
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [searchQuery]);
+
+  // Click outside to dismiss suggestions
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Queue state
   const [queue, setQueue] = useState(INITIAL_QUEUE);
@@ -172,6 +209,7 @@ export default function AudioFocusPage() {
   const handleExecuteSearch = async (queryToSearch) => {
     const q = (queryToSearch || searchQuery).trim();
     if (!q) return;
+    setIsSearchFocused(false);
     setIsSearching(true);
     setShowSearchResults(true);
     try {
@@ -313,11 +351,12 @@ export default function AudioFocusPage() {
       <div className="relative z-20 flex flex-col gap-2.5 mb-4">
         <div className="flex items-center gap-2">
           {/* Main Search Input */}
-          <div className="relative flex-1">
+          <div className="relative flex-1" ref={searchContainerRef}>
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsSearchFocused(true)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleExecuteSearch(); }}
               placeholder="ابحث عن بودكاست، قرآن، موسيقى، أو أي فيديو لتشغيله كصوت فوراً..."
               className="w-full bg-[#121218]/90 backdrop-blur-xl border border-white/10 focus:border-neon-purple rounded-2xl py-2.5 pr-10 pl-4 text-xs sm:text-sm text-white placeholder-void-400 focus:outline-none shadow-xl transition-all"
@@ -325,11 +364,51 @@ export default function AudioFocusPage() {
             <Search size={17} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-void-400 pointer-events-none" />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery('')}
+                onClick={() => { setSearchQuery(''); setSuggestions([]); }}
                 className="absolute left-3 top-1/2 -translate-y-1/2 p-1 text-void-400 hover:text-white"
               >
                 <X size={14} />
               </button>
+            )}
+
+            {/* Live Suggestions Dropdown for Music Search */}
+            {isSearchFocused && suggestions.length > 0 && (
+              <div className="absolute top-full right-0 left-0 mt-2 bg-[#121218]/95 backdrop-blur-2xl border border-white/15 rounded-2xl shadow-[0_16px_50px_rgba(0,0,0,0.85)] overflow-hidden z-50 animate-fade-in max-h-72 overflow-y-auto divide-y divide-white/[0.04]">
+                <div className="px-3 py-2 flex items-center justify-between text-[11px] font-bold text-void-400 bg-white/[0.02]">
+                  <span className="flex items-center gap-1.5 text-pink-400">
+                    <Sparkles size={12} />
+                    <span>اقتراحات البحث الصوتي</span>
+                  </span>
+                  <span className="text-[10px] text-void-500">اختر للتشغيل الفوري</span>
+                </div>
+                {suggestions.map((item, idx) => (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      setSearchQuery(item);
+                      handleExecuteSearch(item);
+                      setIsSearchFocused(false);
+                    }}
+                    className="w-full px-3.5 py-2.5 flex items-center justify-between hover:bg-white/[0.08] active:bg-pink-500/20 transition-colors cursor-pointer group"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <Search size={14} className="text-void-400 group-hover:text-pink-400 transition-colors shrink-0" />
+                      <span className="text-xs sm:text-sm text-white font-medium truncate" dir="auto">{item}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSearchQuery(item);
+                      }}
+                      className="p-1 text-void-500 hover:text-white hover:bg-white/10 rounded-lg shrink-0 transition-all"
+                      title="نسخ للبحث"
+                    >
+                      <ArrowUpRight size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

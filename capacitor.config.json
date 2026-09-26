@@ -5,15 +5,13 @@
   "server": {
     "cleartext": true,
     "allowNavigation": [
-      "voidtube-one.vercel.app",
-      "*.invidious.f5.si",
-      "*.googlevideo.com",
-      "*.ytimg.com",
-      "*.savenow.to",
-      "loader.to",
-      "api.allorigins.win",
-      "corsproxy.io"
+      "*"
     ]
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
   },
   "android": {
     "allowMixedContent": true,
