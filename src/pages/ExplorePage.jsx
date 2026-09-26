@@ -12,12 +12,13 @@ import {
   Trophy, 
   TrendingUp, 
   Globe,
-  Loader2
+  Loader2,
+  RefreshCw
 } from 'lucide-react';
 import { useApp, REGIONS } from '../context/AppContext';
 import api from '../services/api';
 import VideoCard from '../components/VideoCard';
-import { formatViews, formatDuration, formatTimeAgo } from '../utils/formatters';
+import { formatViews, formatDuration, formatTimeAgo, getBestThumbnail } from '../utils/formatters';
 
 const EXPLORE_CATEGORIES = [
   { id: 'podcasts', title: 'بودكاست وحوارات', icon: Headphones, query: 'بودكاست عربي حوارات جديدة', color: 'from-amber-600 to-rose-600', glow: '#f59e0b' },
@@ -38,7 +39,7 @@ export default function ExplorePage() {
   const [loading, setLoading] = useState(true);
   const [loadingCategory, setLoadingCategory] = useState(false);
 
-  // Load spotlights & trending leaderboard
+  // Load spotlights & trending leaderboard with guaranteed fallback
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
@@ -46,14 +47,33 @@ export default function ExplorePage() {
     Promise.allSettled([
       api.getSpotlightVideos(region),
       api.getTrending(region)
-    ]).then(([spotlightRes, trendingRes]) => {
+    ]).then(async ([spotlightRes, trendingRes]) => {
       if (isMounted) {
-        if (spotlightRes.status === 'fulfilled' && Array.isArray(spotlightRes.value)) {
-          setSpotlights(spotlightRes.value.slice(0, 5));
+        let spots = [];
+        let trends = [];
+
+        if (spotlightRes.status === 'fulfilled' && Array.isArray(spotlightRes.value) && spotlightRes.value.length > 0) {
+          spots = spotlightRes.value.slice(0, 5);
         }
-        if (trendingRes.status === 'fulfilled' && Array.isArray(trendingRes.value)) {
-          setTrendingLeaderboard(trendingRes.value.slice(0, 10));
+        if (trendingRes.status === 'fulfilled' && Array.isArray(trendingRes.value) && trendingRes.value.length > 0) {
+          trends = trendingRes.value.slice(0, 10);
         }
+
+        // Guaranteed fallback to explore feed if either is empty
+        if (spots.length === 0 || trends.length === 0) {
+          try {
+            const fallbackFeed = await api.getExploreFeed({ region });
+            if (Array.isArray(fallbackFeed) && fallbackFeed.length > 0) {
+              if (spots.length === 0) spots = fallbackFeed.slice(0, 5);
+              if (trends.length === 0) trends = fallbackFeed.slice(0, 10);
+            }
+          } catch (e) {
+            console.warn('Explore feed fallback error:', e);
+          }
+        }
+
+        setSpotlights(spots);
+        setTrendingLeaderboard(trends);
         setLoading(false);
       }
     });
@@ -82,6 +102,8 @@ export default function ExplorePage() {
   };
 
   const activeSpotlight = spotlights[activeSpotlightIdx] || trendingLeaderboard[0] || null;
+  const spotlightId = activeSpotlight?.videoId || activeSpotlight?.id;
+  const spotlightThumb = activeSpotlight ? getBestThumbnail(activeSpotlight.videoThumbnails, spotlightId) : '';
 
   return (
     <div className="w-full pb-16 animate-fade-in text-right" dir="rtl">
@@ -124,14 +146,15 @@ export default function ExplorePage() {
       {activeSpotlight && (
         <div className="relative rounded-3xl overflow-hidden glass-card border border-white/[0.08] mb-8 group shadow-[0_10px_40px_rgba(0,0,0,0.8)]">
           
-          <div className="relative w-full h-64 sm:h-80 md:h-96">
+          <div className="relative w-full h-64 sm:h-80 md:h-96 bg-black overflow-hidden">
             <img
-              src={
-                activeSpotlight.videoThumbnails?.[0]?.url ||
-                activeSpotlight.thumbnail ||
-                `https://i.ytimg.com/vi/${activeSpotlight.videoId || activeSpotlight.id}/maxresdefault.jpg`
-              }
+              src={spotlightThumb}
               alt={activeSpotlight.title}
+              onError={(e) => {
+                if (spotlightId) {
+                  e.currentTarget.src = `https://i.ytimg.com/vi/${spotlightId}/hqdefault.jpg`;
+                }
+              }}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
             />
             {/* Ambient gradients */}
@@ -159,7 +182,7 @@ export default function ExplorePage() {
             </div>
 
             <button
-              onClick={() => navigateToWatch(activeSpotlight.videoId || activeSpotlight.id, activeSpotlight)}
+              onClick={() => navigateToWatch(spotlightId, activeSpotlight)}
               className="mt-1 flex items-center gap-2 px-5 py-2.5 rounded-full bg-white text-black hover:bg-neon-purple hover:text-white font-black text-xs sm:text-sm shadow-xl transition-all active:scale-95 group/btn"
             >
               <Play size={16} className="fill-current" />
@@ -255,7 +278,7 @@ export default function ExplorePage() {
         </div>
       )}
 
-      {/* 4. Top 10 Regional Trending Leaderboard */}
+      {/* 4. Top 10 Regional Trending Leaderboard with Reliable Thumbnails */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-base font-black text-white flex items-center gap-2">
@@ -265,56 +288,72 @@ export default function ExplorePage() {
           <span className="text-xs text-void-400 font-medium">محدّث لحظياً</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {trendingLeaderboard.map((item, index) => {
-            const rank = index + 1;
-            const rankBadge =
-              rank === 1 ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
-              rank === 2 ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' :
-              rank === 3 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' :
-              'bg-white/[0.04] text-void-400 border-white/[0.06]';
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-24 rounded-2xl bg-white/[0.03] animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {trendingLeaderboard.map((item, index) => {
+              const rank = index + 1;
+              const vidId = item.videoId || item.id;
+              const thumbUrl = getBestThumbnail(item.videoThumbnails, vidId);
 
-            return (
-              <div
-                key={item.videoId || item.id || index}
-                onClick={() => navigateToWatch(item.videoId || item.id, item)}
-                className="flex items-center gap-3.5 p-3 rounded-2xl glass-card hover:bg-white/[0.06] cursor-pointer transition-all border border-white/[0.05] group active:scale-[0.99]"
-              >
-                {/* Rank Number Badge */}
-                <div className={`w-8 h-8 rounded-xl font-black text-sm flex items-center justify-center font-mono border shrink-0 ${rankBadge}`}>
-                  {rank}
-                </div>
+              const rankBadge =
+                rank === 1 ? 'bg-amber-500/20 text-amber-400 border-amber-500/40' :
+                rank === 2 ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' :
+                rank === 3 ? 'bg-cyan-500/20 text-cyan-400 border-cyan-500/40' :
+                'bg-white/[0.04] text-void-400 border-white/[0.06]';
 
-                {/* Thumbnail */}
-                <div className="relative w-28 sm:w-32 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
-                  <img
-                    src={item.videoThumbnails?.[0]?.url || item.thumbnail || `https://i.ytimg.com/vi/${item.videoId || item.id}/mqdefault.jpg`}
-                    alt={item.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                  />
-                  {item.lengthSeconds > 0 && (
-                    <span className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-black/85 text-[10px] font-bold text-white font-mono">
-                      {formatDuration(item.lengthSeconds)}
-                    </span>
-                  )}
-                </div>
+              return (
+                <div
+                  key={vidId || index}
+                  onClick={() => navigateToWatch(vidId, item)}
+                  className="flex items-center gap-3.5 p-3 rounded-2xl glass-card hover:bg-white/[0.06] cursor-pointer transition-all border border-white/[0.05] group active:scale-[0.99]"
+                >
+                  {/* Rank Number Badge */}
+                  <div className={`w-8 h-8 rounded-xl font-black text-sm flex items-center justify-center font-mono border shrink-0 ${rankBadge}`}>
+                    {rank}
+                  </div>
 
-                {/* Meta details */}
-                <div className="flex flex-col min-w-0 flex-1">
-                  <h4 className="text-xs font-bold text-white line-clamp-2 group-hover:text-neon-purple transition-colors leading-snug">
-                    {item.title}
-                  </h4>
-                  <span className="text-[11px] text-void-400 mt-1 truncate">{item.author}</span>
-                  <div className="flex items-center gap-2 text-[10px] text-void-500 mt-0.5 font-mono">
-                    <span>{formatViews(item.viewCount)}</span>
-                    <span>•</span>
-                    <span>{formatTimeAgo(item.published || item.publishedText)}</span>
+                  {/* Thumbnail with guaranteed loading */}
+                  <div className="relative w-28 sm:w-32 aspect-video rounded-xl overflow-hidden bg-black shrink-0">
+                    <img
+                      src={thumbUrl}
+                      alt={item.title}
+                      onError={(e) => {
+                        if (vidId) {
+                          e.currentTarget.src = `https://i.ytimg.com/vi/${vidId}/hqdefault.jpg`;
+                        }
+                      }}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    {item.lengthSeconds > 0 && (
+                      <span className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-black/85 text-[10px] font-bold text-white font-mono">
+                        {formatDuration(item.lengthSeconds)}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Meta details */}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <h4 className="text-xs font-bold text-white line-clamp-2 group-hover:text-neon-purple transition-colors leading-snug">
+                      {item.title}
+                    </h4>
+                    <span className="text-[11px] text-void-400 mt-1 truncate">{item.author}</span>
+                    <div className="flex items-center gap-2 text-[10px] text-void-500 mt-0.5 font-mono">
+                      <span>{formatViews(item.viewCount)}</span>
+                      <span>•</span>
+                      <span>{formatTimeAgo(item.published || item.publishedText)}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
     </div>

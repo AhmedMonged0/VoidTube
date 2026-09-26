@@ -10,14 +10,15 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
-  Download
+  Download,
+  Headphones
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { formatViews, formatTimeAgo } from '../../utils/formatters';
 import { Loader2 } from 'lucide-react';
 
 export default function VideoDetails({ videoData, videoId }) {
-  const { isWatchLater, toggleWatchLater, navigateToSearch, navigateToChannel, triggerBackgroundDownload, isVideoDownloaded, downloadingVideos } = useApp();
+  const { isWatchLater, toggleWatchLater, navigateToSearch, navigateToChannel, navigateToAudio, triggerBackgroundDownload, isVideoDownloaded, downloadingVideos } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -107,6 +108,26 @@ export default function VideoDetails({ videoData, videoId }) {
 
         {/* Left (in RTL): Actions */}
         <div className="flex items-center gap-2">
+          {/* Audio Focus Mode Button */}
+          <button
+            onClick={() => {
+              if (navigateToAudio) {
+                navigateToAudio({
+                  videoId,
+                  title: videoData.title,
+                  author: videoData.author,
+                  duration: videoData.lengthSeconds,
+                  thumbnail: videoData.thumbnailUrl || (videoData.videoThumbnails?.[0]?.url) || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+                });
+              }
+            }}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/[0.06] hover:bg-neon-purple/20 text-void-200 hover:text-white border border-white/10 transition-all active:scale-95 shadow-sm"
+            title="تشغيل في وضع الصوت والتركيز (مشغل الفينيل)"
+          >
+            <Headphones size={14} className="text-neon-purple" />
+            <span className="hidden sm:inline">استماع صوتي</span>
+          </button>
+
           {/* Download Button */}
           <button
             onClick={() => {
