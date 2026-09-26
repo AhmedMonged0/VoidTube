@@ -783,10 +783,20 @@ export default function SettingsPage() {
 
             <button
               onClick={handleOpenApk}
-              className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-500/40 text-emerald-400 hover:text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 border border-emerald-500/40 text-emerald-400 hover:text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
+              title="تحميل تطبيق الأندرويد"
             >
               <Smartphone size={14} className="text-emerald-400" />
-              <span>تحميل تطبيق APK</span>
+              <span>تحميل APK (أندرويد)</span>
+            </button>
+
+            <button
+              onClick={handleOpenApk}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-neon-purple/20 to-indigo-500/20 hover:from-neon-purple/30 hover:to-indigo-500/30 border border-neon-purple/40 text-neon-purple hover:text-white text-xs font-bold transition-all active:scale-95 shadow-sm"
+              title="تحميل تطبيق الآيفون"
+            >
+              <span className="text-xs leading-none">🍏</span>
+              <span>تحميل IPA (آيفون)</span>
             </button>
           </div>
 

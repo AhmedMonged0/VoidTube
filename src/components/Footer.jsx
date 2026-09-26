@@ -52,23 +52,23 @@ export default function Footer({ onOpenApkModal }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-extrabold text-white">تطبيق VoidTube للأندرويد</h3>
+                <h3 className="text-lg sm:text-xl font-extrabold text-white">تطبيق VoidTube للهواتف (أندرويد وآيفون)</h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                   v{CURRENT_APP_VERSION} متوفر الآن
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-void-300 mt-1 max-w-xl">
-                حمّل التطبيق الرسمي لهاتفك وتمتّع بالمشغل المصغر العائم، التمرير اللانهائي، وتنزيل الفيديوهات للمشاهدة بدون إنترنت وبدون إعلانات نهائياً!
+                حمّل التطبيق الرسمي لهاتفك وتمتّع بالمشغل المصغر العائم، التمرير اللانهائي، تشغيل الصوت بالخلفية على شاشة القفل، وتنزيل الفيديوهات للمشاهدة بدون إنترنت وبدون إعلانات نهائياً!
               </p>
             </div>
           </div>
 
           <button
             onClick={handleOpenApk}
-            className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-neon-purple to-[#a855f7] hover:from-[#9333ea] hover:to-[#c084fc] text-white text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(168,85,247,0.4)] active:scale-95 transition-all duration-200 shrink-0 group"
+            className="w-full md:w-auto px-6 py-3.5 rounded-2xl bg-gradient-to-r from-neon-purple via-[#9333ea] to-[#a855f7] hover:from-[#9333ea] hover:to-[#c084fc] text-white text-xs sm:text-sm font-extrabold flex items-center justify-center gap-2.5 shadow-[0_0_25px_rgba(168,85,247,0.4)] active:scale-95 transition-all duration-200 shrink-0 group"
           >
             <Smartphone size={18} className="group-hover:scale-110 transition-transform" />
-            <span>تحميل ملف APK للهاتف</span>
+            <span>تحميل التطبيق (APK / IPA)</span>
             <Download size={16} className="animate-bounce" />
           </button>
         </div>

@@ -1,4 +1,8 @@
 {
   "version": "1.0.10",
-  "notes": "🌌 التحديث السينمائي الشامل: إضافة صفحة القناة المتكاملة وتصميم الأندرويد الجديد، شاشة الصوت والتركيز مع أسطوانة الـ Vinyl والـ Soundwave، مركز الاستكشاف وقائمة التريند، صفحة المكتبة الشاملة، والتحكم بالسرعة ومؤقت النوم وتكرار الفيديو في المشغل."
+  "notes": "🌌 التحديث الشامل: دعم كامل لهواتف الأندرويد والآيفون (حزم APK و IPA)، تحديث فوري للاقتراحات الصوتية التلقائية، مشغل أسطوانة الـ Vinyl الفاخر، وصفحة الإعدادات والتحكم الموسعة.",
+  "apkUrl": "/VoidTube.apk",
+  "ipaUrl": "/VoidTube.ipa",
+  "githubApkUrl": "https://github.com/AhmedMonged0/VoidTube/releases/latest/download/VoidTube.apk",
+  "githubIpaUrl": "https://github.com/AhmedMonged0/VoidTube/releases/latest/download/VoidTube.ipa"
 }
