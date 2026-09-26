@@ -19,7 +19,6 @@ import ApkDownloadModal from './components/ApkDownloadModal';
 import UpdateModal from './components/UpdateModal';
 import ToastNotification from './components/ToastNotification';
 import MobileBottomNav from './components/MobileBottomNav';
-import Sidebar from './components/Sidebar';
 import MiniPlayer from './components/Player/MiniPlayer';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
 import Footer from './components/Footer';
@@ -65,13 +64,10 @@ function AppContent() {
       {/* Sticky Top Header (Responsive Desktop & Mobile) */}
       <Header onOpenApkModal={() => setIsApkModalOpen(true)} />
 
-      {/* Main Container with Sidebar */}
-      <div className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-5 lg:px-8 flex gap-4 sm:gap-6 pb-24 md:pb-8">
-        {/* Sidebar Navigation */}
-        <Sidebar />
-
+      {/* Main Container */}
+      <div className="flex-1 max-w-7xl w-full mx-auto px-2 sm:px-5 lg:px-8 pb-24 md:pb-8">
         {/* Main Content Area */}
-        <main className="flex-1 min-w-0">
+        <main className="w-full min-w-0">
           {renderPage()}
         </main>
       </div>

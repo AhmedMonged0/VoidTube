@@ -52,11 +52,15 @@ export default function Header({ onOpenApkModal }) {
         {/* Left: Hamburger Menu & Brand Logo */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <button
-            onClick={toggleSidebar}
-            className="p-2 sm:px-3 sm:py-2 rounded-xl bg-white/[0.04] hover:bg-neon-purple/20 text-void-300 hover:text-neon-purple border border-white/5 hover:border-neon-purple/30 transition-all active:scale-95 flex items-center gap-1.5"
-            title="مركز الإعدادات والتحكم"
+            onClick={navigateToSettings}
+            className={`p-2 sm:px-3 sm:py-2 rounded-xl transition-all active:scale-95 flex items-center gap-1.5 ${
+              isSettings
+                ? 'bg-neon-purple text-white shadow-neon-purple border border-neon-purple'
+                : 'bg-white/[0.04] hover:bg-neon-purple/20 text-void-300 hover:text-neon-purple border border-white/5 hover:border-neon-purple/30'
+            }`}
+            title="الإعدادات والتحكم"
           >
-            <SlidersHorizontal size={17} />
+            <Settings size={16} className={isSettings ? 'animate-spin-slow' : ''} />
             <span className="hidden sm:inline text-xs font-bold">الإعدادات</span>
           </button>
 
@@ -181,26 +185,7 @@ export default function Header({ onOpenApkModal }) {
             )}
           </button>
 
-          {/* Dedicated Settings Button */}
-          <button
-            onClick={navigateToSettings}
-            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border transition-all duration-150 group ${
-              isSettings
-                ? 'bg-neon-purple text-white border-neon-purple shadow-[0_0_15px_rgba(139,92,246,0.4)]'
-                : 'bg-[#141419] hover:bg-[#1a1a24] border-white/10 text-void-300 hover:text-white'
-            }`}
-            title="الإعدادات والتحكم"
-          >
-            <Settings
-              size={15}
-              className={`transition-all ${
-                isSettings ? 'animate-spin-slow text-white' : 'text-void-400 group-hover:text-neon-purple group-hover:rotate-45'
-              }`}
-            />
-            <span className="hidden xl:inline text-xs font-semibold">
-              الإعدادات
-            </span>
-          </button>
+
 
         </div>
 

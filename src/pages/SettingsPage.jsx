@@ -31,14 +31,6 @@ import { useApp, REGIONS } from '../context/AppContext';
 import { INVIDIOUS_INSTANCES } from '../services/instances';
 import api from '../services/api';
 
-const THEME_ACCENTS = [
-  { id: 'purple', name: 'البنفسجي السديمي', color: '#8b5cf6', ring: 'ring-purple-500', glow: 'shadow-[0_0_20px_rgba(139,92,246,0.35)]', border: 'border-purple-500/50', bg: 'bg-purple-500/10' },
-  { id: 'cyan', name: 'السيبراني المتوهج', color: '#06b6d4', ring: 'ring-cyan-500', glow: 'shadow-[0_0_20px_rgba(6,182,212,0.35)]', border: 'border-cyan-500/50', bg: 'bg-cyan-500/10' },
-  { id: 'pink', name: 'الوردي النيوني', color: '#ec4899', ring: 'ring-pink-500', glow: 'shadow-[0_0_20px_rgba(236,72,153,0.35)]', border: 'border-pink-500/50', bg: 'bg-pink-500/10' },
-  { id: 'emerald', name: 'الزمردي الرقمي', color: '#10b981', ring: 'ring-emerald-500', glow: 'shadow-[0_0_20px_rgba(16,185,129,0.35)]', border: 'border-emerald-500/50', bg: 'bg-emerald-500/10' },
-  { id: 'amber', name: 'العنبر الشمسي', color: '#f59e0b', ring: 'ring-amber-500', glow: 'shadow-[0_0_20px_rgba(245,158,11,0.35)]', border: 'border-amber-500/50', bg: 'bg-amber-500/10' },
-];
-
 const QUALITY_OPTIONS = [
   { id: 'auto', label: 'تلقائي (Auto)', desc: 'يتكيف تلقائياً مع سرعة الاتصال' },
   { id: '1080p', label: '1080p (Full HD)', desc: 'أعلى دقة نقاء ووضوح فائق' },
@@ -70,8 +62,6 @@ export default function SettingsPage() {
     toggleAutoplayNext,
     playbackSpeed,
     setPlaybackSpeed,
-    accentTheme,
-    setAccentTheme,
     history,
     clearHistory,
     recentSearches,
@@ -178,7 +168,7 @@ export default function SettingsPage() {
                 </span>
               </h1>
               <p className="text-xs sm:text-sm text-void-400 mt-0.5">
-                تخصيص مشغل الفيديو، سيرفرات البث المباشر، المظهر النيوني، والنسخ الاحتياطي
+                تخصيص مشغل الفيديو، سيرفرات البث، تفضيلات العرض، والنسخ الاحتياطي
               </p>
             </div>
           </div>
@@ -194,58 +184,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* 2. Top Metric Badges (Overview Stats) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-        
-        {/* Metric 1: Server Status */}
-        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3 border border-white/[0.06]">
-          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
-            <Server size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-[11px] font-medium text-void-400">سيرفر البث النشط</span>
-            </div>
-            <p className="text-xs font-bold text-white truncate font-mono mt-0.5" dir="ltr">
-              {activeInstance?.replace(/^https?:\/\//, '') || 'f5.si'}
-            </p>
-          </div>
-        </div>
-
-        {/* Metric 2: Zero Tracking / Privacy */}
-        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3 border border-white/[0.06]">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
-            <ShieldCheck size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-medium text-void-400">خصوصية البث</span>
-            </div>
-            <p className="text-xs font-bold text-emerald-400 mt-0.5">
-              100% بدون إعلانات وبدون تعقب
-            </p>
-          </div>
-        </div>
-
-        {/* Metric 3: Saved Library Items */}
-        <div className="glass-card rounded-2xl p-3.5 flex items-center gap-3 border border-white/[0.06]">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-            <HardDrive size={18} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-medium text-void-400">المحتوى المحفوظ محلياً</span>
-            </div>
-            <p className="text-xs font-bold text-white mt-0.5">
-              {(watchLater?.length || 0) + (downloads?.length || 0)} عنصر بالمكتبة
-            </p>
-          </div>
-        </div>
-
-      </div>
-
-      {/* 3. Settings Cards Grid */}
+      {/* Settings Cards Grid */}
       <div className="flex flex-col gap-6">
 
         {/* ========================================================
@@ -567,55 +506,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* ========================================================
-            CARD 4: AESTHETICS & ACCENT THEME
-           ======================================================== */}
-        <div className="glass-card rounded-3xl p-5 sm:p-6 border border-white/[0.07]">
-          <div className="flex items-center gap-3 mb-4 pb-4 border-b border-white/[0.06]">
-            <div className="w-9 h-9 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/30 flex items-center justify-center shadow-sm">
-              <Palette size={18} />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white flex items-center gap-2">
-                المظهر ولون التوهج النيوني (Neon Accent)
-              </h2>
-              <p className="text-xs text-void-400">اختر لهجة الإضاءة التفاعلية للمنصة (OLED Dark Mode مفعّل افتراضياً لحماية العين وتوفير البطارية)</p>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            {THEME_ACCENTS.map((th) => {
-              const isSelected = accentTheme === th.id;
-              return (
-                <button
-                  key={th.id}
-                  onClick={() => {
-                    setAccentTheme(th.id);
-                    showToast(`تم تفعيل سمة: ${th.name}`, 'info');
-                  }}
-                  className={`p-3 rounded-2xl border text-right flex flex-col justify-between gap-3 transition-all duration-200 ${
-                    isSelected
-                      ? `${th.bg} ${th.border} ${th.glow} ring-1 ring-white/20`
-                      : 'bg-white/[0.02] hover:bg-white/[0.05] border-white/[0.07]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span 
-                      className="w-5 h-5 rounded-full shadow-inner border border-white/20" 
-                      style={{ backgroundColor: th.color }}
-                    />
-                    {isSelected && (
-                      <Check size={14} className="text-white" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-bold text-white">{th.name}</h3>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* ========================================================
             CARD 5: PRIVACY, BACKUP & STORAGE HUB

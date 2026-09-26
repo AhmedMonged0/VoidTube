@@ -20,8 +20,8 @@ export default function Footer({ onOpenApkModal }) {
   const { 
     navigateToHome, 
     navigateToBookmarks, 
+    navigateToSettings,
     setIsDownloadsOpen, 
-    toggleSidebar, 
     CURRENT_APP_VERSION,
     watchLater,
     downloads 
@@ -170,7 +170,7 @@ export default function Footer({ onOpenApkModal }) {
               </li>
               <li>
                 <button
-                  onClick={toggleSidebar}
+                  onClick={navigateToSettings}
                   className="hover:text-white transition-colors flex items-center gap-2"
                 >
                   <SlidersHorizontal size={12} className="text-void-400" />
