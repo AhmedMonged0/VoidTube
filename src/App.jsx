@@ -5,6 +5,10 @@ import HomePage from './pages/HomePage';
 import SearchPage from './pages/SearchPage';
 import WatchPage from './pages/WatchPage';
 import BookmarksPage from './pages/BookmarksPage';
+import ChannelPage from './pages/ChannelPage';
+import AudioFocusPage from './pages/AudioFocusPage';
+import LibraryPage from './pages/LibraryPage';
+import ExplorePage from './pages/ExplorePage';
 import WatchLaterDrawer from './components/WatchLaterDrawer';
 import DownloadsDrawer from './components/DownloadsDrawer';
 import InstanceSelectorModal from './components/InstanceSelectorModal';
@@ -17,6 +21,7 @@ import MobileBottomNav from './components/MobileBottomNav';
 import Sidebar from './components/Sidebar';
 import MiniPlayer from './components/Player/MiniPlayer';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
+import Footer from './components/Footer';
 import { Shield, Zap } from 'lucide-react';
 
 function AppContent() {
@@ -35,6 +40,15 @@ function AppContent() {
         return <WatchPage />;
       case 'search':
         return <SearchPage />;
+      case 'channel':
+        return <ChannelPage />;
+      case 'audio':
+      case 'focus':
+        return <AudioFocusPage />;
+      case 'library':
+        return <LibraryPage />;
+      case 'explore':
+        return <ExplorePage />;
       case 'bookmarks':
         return <BookmarksPage />;
       case 'home':
@@ -78,32 +92,8 @@ function AppContent() {
       {/* Fullscreen Mobile Search Overlay */}
       <MobileSearchOverlay />
 
-      {/* Minimalist Cinematic Footer (Desktop view) */}
-      <footer className="w-full border-t border-white/[0.05] bg-[#08080a] py-8 mt-16 hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-void-500">
-          <div className="flex items-center gap-3">
-            <span className="font-extrabold text-white tracking-wider flex items-center gap-1">
-              VOID<span className="text-neon-purple">TUBE</span>
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1 text-void-400">
-              <Shield size={13} className="text-emerald-400" />
-              Ad-Free & Distraction-Free
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1 text-void-400">
-              <Zap size={13} className="text-neon-purple" />
-              Invidious Powered
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4 text-void-400">
-            <span>OLED Cinematic Dark Mode</span>
-            <span>•</span>
-            <span>No Algorithmic Traps</span>
-          </div>
-        </div>
-      </footer>
+      {/* Global Comprehensive Footer */}
+      <Footer onOpenApkModal={() => setIsApkModalOpen(true)} />
     </div>
   );
 }

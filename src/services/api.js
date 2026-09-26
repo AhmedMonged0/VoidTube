@@ -467,6 +467,112 @@ class InvidiousApiService {
   }
 
   /**
+   * Get Channel Details (with resilient search fallback)
+   */
+  async getChannelDetails(channelId, channelName = '') {
+    const isChannelId = channelId && (channelId.startsWith('UC') || channelId.length >= 20);
+    if (isChannelId) {
+      try {
+        const details = await this.fetchWithFallback(`/api/v1/channels/${channelId}`, { hl: 'ar' }, { timeoutMs: 3000 });
+        if (details && (details.author || details.title)) {
+          return details;
+        }
+      } catch (err) {
+        console.warn('[VoidTube] Channel API fetch failed, trying search fallback:', err);
+      }
+    }
+
+    // Fallback: search by author/channel name
+    const query = channelName || channelId || 'YouTube Channel';
+    try {
+      const searchRes = await this.searchVideos(query, 'channel', 1);
+      if (Array.isArray(searchRes) && searchRes.length > 0) {
+        const match = searchRes[0];
+        return {
+          author: match.author || match.title || query,
+          authorId: match.authorId || channelId,
+          authorThumbnails: match.authorThumbnails || [{ url: match.thumbnail || `https://i.ytimg.com/i/${channelId}/1.jpg` }],
+          authorBanners: match.authorBanners || [],
+          subCount: match.subCount || null,
+          subCountText: match.subCountText || 'مشترك',
+          description: match.description || 'قناة يوتيوب على شبكة VoidTube',
+          authorVerified: match.authorVerified || false
+        };
+      }
+    } catch (e2) {
+      console.warn('[VoidTube] Channel search fallback failed:', e2);
+    }
+
+    return {
+      author: channelName || 'القناة',
+      authorId: channelId,
+      authorThumbnails: [{ url: `https://i.ytimg.com/i/${channelId}/1.jpg` }],
+      authorBanners: [],
+      subCountText: '',
+      description: '',
+      authorVerified: false
+    };
+  }
+
+  /**
+   * Get Channel Videos with sorting options (latest, popular, oldest)
+   */
+  async getChannelVideos(channelId, channelName = '', sortBy = 'latest') {
+    const isChannelId = channelId && (channelId.startsWith('UC') || channelId.length >= 20);
+    
+    // Convert sortBy to Invidious / search sort param
+    let invidiousSort = 'newest';
+    let searchSort = 'upload_date';
+    if (sortBy === 'popular' || sortBy === 'most_viewed') {
+      invidiousSort = 'popular';
+      searchSort = 'view_count';
+    } else if (sortBy === 'oldest') {
+      invidiousSort = 'oldest';
+      searchSort = 'upload_date';
+    }
+
+    if (isChannelId) {
+      try {
+        const res = await this.fetchWithFallback(`/api/v1/channels/${channelId}/videos`, {
+          sort_by: invidiousSort,
+          hl: 'ar'
+        }, { timeoutMs: 3500 });
+        if (Array.isArray(res) && res.length > 0) return res;
+        if (res && Array.isArray(res.videos) && res.videos.length > 0) return res.videos;
+      } catch (err) {
+        console.warn('[VoidTube] Channel videos endpoint failed, trying search fallback:', err);
+      }
+    }
+
+    // Fallback: search videos by channel name
+    const query = channelName || channelId || '';
+    if (!query) return [];
+    try {
+      const results = await this.searchVideos(query, 'video', 1, { sortBy: searchSort });
+      return Array.isArray(results) ? results : [];
+    } catch (err) {
+      console.warn('[VoidTube] Fallback channel search failed:', err);
+      return [];
+    }
+  }
+
+  /**
+   * Get Spotlight Videos for Hero carousel
+   */
+  async getSpotlightVideos(region = 'EG') {
+    try {
+      const trending = await this.getTrending(region);
+      if (Array.isArray(trending) && trending.length >= 3) {
+        return trending.slice(0, 5);
+      }
+    } catch (e) {
+      console.warn('[VoidTube] Spotlight trending failed, using explore feed fallback:', e);
+    }
+    const feed = await this.getExploreFeed({ region, page: 1 });
+    return (feed || []).slice(0, 5);
+  }
+
+  /**
    * Ping/test health of an instance
    */
   async pingInstance(url) {

@@ -40,17 +40,59 @@ function safeSetStorage(key, value) {
 }
 
 export function AppProvider({ children }) {
-  // Navigation state: { page: 'home' | 'watch' | 'search' | 'bookmarks', videoId: string, query: string }
+  // Navigation state: { page: 'home' | 'watch' | 'search' | 'bookmarks' | 'channel' | 'audio' | 'library' | 'explore', videoId, query, channelId, channelData, audioTrack }
   const [nav, setNav] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const videoId = params.get('v');
     const query = params.get('q');
     const page = params.get('page');
+    const channelId = params.get('c');
 
     if (videoId) return { page: 'watch', videoId, query: '' };
+    if (channelId) return { page: 'channel', channelId, query: '', videoId: '' };
     if (query) return { page: 'search', query, videoId: '' };
-    if (page === 'bookmarks') return { page: 'bookmarks', query: '', videoId: '' };
+    if (page === 'bookmarks' || page === 'library') return { page: 'library', query: '', videoId: '' };
+    if (page === 'audio' || page === 'focus') return { page: 'audio', query: '', videoId: '' };
+    if (page === 'explore') return { page: 'explore', query: '', videoId: '' };
     return { page: 'home', query: '', videoId: '' };
+  });
+
+  // Global Player & Audio Preferences
+  const [playbackSpeed, setPlaybackSpeedState] = useState(() => {
+    return parseFloat(localStorage.getItem('voidtube_playback_speed') || '1');
+  });
+  const setPlaybackSpeed = useCallback((speed) => {
+    setPlaybackSpeedState(speed);
+    localStorage.setItem('voidtube_playback_speed', speed.toString());
+  }, []);
+
+  const [isLoop, setIsLoop] = useState(false);
+  const toggleLoop = useCallback(() => setIsLoop(prev => !prev), []);
+
+  // Sleep Timer System
+  const [sleepTimer, setSleepTimer] = useState({ active: false, minutes: 0, endTime: null, label: '' });
+  const sleepTimerTimeoutRef = useRef(null);
+
+  const cancelSleepTimer = useCallback(() => {
+    if (sleepTimerTimeoutRef.current) {
+      clearTimeout(sleepTimerTimeoutRef.current);
+      sleepTimerTimeoutRef.current = null;
+    }
+    setSleepTimer({ active: false, minutes: 0, endTime: null, label: '' });
+  }, []);
+
+  // Active Audio Focus Track State
+  const [currentAudioTrack, setCurrentAudioTrack] = useState({
+    title: 'Focusing Deep, | Coding Void',
+    subtitle: 'Focusing Deep, Vol. 4 | Coding Void',
+    duration: 265, // 04:25
+    artwork: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600&auto=format&fit=crop',
+    chapters: [
+      { title: 'Intro', time: 0 },
+      { title: 'Setup', time: 760 },
+      { title: 'Core Implementation', time: 1452 },
+      { title: 'Q&A', time: 2710 }
+    ]
   });
 
   // Watch Later & Favorites
@@ -129,7 +171,7 @@ export function AppProvider({ children }) {
   }, []);
 
   // In-App Updater State
-  const CURRENT_APP_VERSION = '1.0.9';
+  const CURRENT_APP_VERSION = '1.0.10';
   const [updateInfo, setUpdateInfo] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
@@ -325,15 +367,22 @@ export function AppProvider({ children }) {
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       const videoId = params.get('v');
+      const channelId = params.get('c');
       const query = params.get('q');
       const page = params.get('page');
 
       if (videoId) {
         setNav({ page: 'watch', videoId, query: '' });
+      } else if (channelId) {
+        setNav({ page: 'channel', channelId, query: '', videoId: '' });
       } else if (query) {
         setNav({ page: 'search', query, videoId: '' });
-      } else if (page === 'bookmarks') {
-        setNav({ page: 'bookmarks', query: '', videoId: '' });
+      } else if (page === 'bookmarks' || page === 'library') {
+        setNav({ page: 'library', query: '', videoId: '' });
+      } else if (page === 'audio' || page === 'focus') {
+        setNav({ page: 'audio', query: '', videoId: '' });
+      } else if (page === 'explore') {
+        setNav({ page: 'explore', query: '', videoId: '' });
       } else {
         setNav({ page: 'home', query: '', videoId: '' });
       }
@@ -343,17 +392,35 @@ export function AppProvider({ children }) {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Sleep Timer Controller
+  const startSleepTimer = useCallback((minutes, label = '') => {
+    if (sleepTimerTimeoutRef.current) {
+      clearTimeout(sleepTimerTimeoutRef.current);
+    }
+    const ms = minutes * 60 * 1000;
+    const endTime = Date.now() + ms;
+    const displayLabel = label || `${minutes} دقيقة`;
+    setSleepTimer({ active: true, minutes, endTime, label: displayLabel });
+    showToast(`⏰ تم تفعيل مؤقت النوم: ${displayLabel}`, 'info');
+
+    sleepTimerTimeoutRef.current = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('voidtube-sleep-timer-trigger'));
+      setSleepTimer({ active: false, minutes: 0, endTime: null, label: '' });
+      showToast('💤 انتهى وقت مؤقت النوم وتم إيقاف التشغيل للمحافظة على هدوئك', 'info');
+    }, ms);
+  }, [showToast]);
+
   // Navigation helpers
   const navigateToHome = useCallback(() => {
     window.history.pushState({}, '', window.location.pathname);
-    setNav({ page: 'home', query: '', videoId: '' });
+    setNav({ page: 'home', query: '', videoId: '', channelId: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const navigateToWatch = useCallback((videoId, videoData = null) => {
     if (!videoId) return;
     window.history.pushState({}, '', `?v=${videoId}`);
-    setNav({ page: 'watch', videoId, query: '', videoData });
+    setNav({ page: 'watch', videoId, query: '', videoData, channelId: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     if (videoData) {
@@ -371,15 +438,39 @@ export function AppProvider({ children }) {
     const cleanQuery = query.trim();
     addRecentSearch(cleanQuery);
     window.history.pushState({}, '', `?q=${encodeURIComponent(cleanQuery)}`);
-    setNav({ page: 'search', query: cleanQuery, videoId: '' });
+    setNav({ page: 'search', query: cleanQuery, videoId: '', channelId: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [addRecentSearch]);
 
-  const navigateToBookmarks = useCallback(() => {
-    window.history.pushState({}, '', `?page=bookmarks`);
-    setNav({ page: 'bookmarks', query: '', videoId: '' });
+  const navigateToChannel = useCallback((channelId, channelData = null) => {
+    if (!channelId) return;
+    window.history.pushState({}, '', `?c=${encodeURIComponent(channelId)}`);
+    setNav({ page: 'channel', channelId, channelData, query: '', videoId: '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
+
+  const navigateToAudio = useCallback((trackData = null) => {
+    window.history.pushState({}, '', `?page=audio`);
+    if (trackData) setCurrentAudioTrack(trackData);
+    setNav({ page: 'audio', query: '', videoId: '', channelId: '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const navigateToLibrary = useCallback(() => {
+    window.history.pushState({}, '', `?page=library`);
+    setNav({ page: 'library', query: '', videoId: '', channelId: '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const navigateToExplore = useCallback(() => {
+    window.history.pushState({}, '', `?page=explore`);
+    setNav({ page: 'explore', query: '', videoId: '', channelId: '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  const navigateToBookmarks = useCallback(() => {
+    navigateToLibrary();
+  }, [navigateToLibrary]);
 
   // Keep live references for Android hardware back button handler
   const navRef = useRef(nav);
@@ -572,6 +663,19 @@ export function AppProvider({ children }) {
         navigateToWatch,
         navigateToSearch,
         navigateToBookmarks,
+        navigateToChannel,
+        navigateToAudio,
+        navigateToLibrary,
+        navigateToExplore,
+        playbackSpeed,
+        setPlaybackSpeed,
+        isLoop,
+        toggleLoop,
+        sleepTimer,
+        startSleepTimer,
+        cancelSleepTimer,
+        currentAudioTrack,
+        setCurrentAudioTrack,
         watchLater,
         toggleWatchLater,
         isWatchLater,

@@ -41,6 +41,7 @@ export default function VideoCard({ video, priority = false }) {
     isVideoDownloaded, 
     downloadingVideos,
     navigateToSearch,
+    navigateToChannel,
     showToast 
   } = useApp();
 
@@ -122,7 +123,14 @@ export default function VideoCard({ video, priority = false }) {
 
   const handleChannelClick = (e) => {
     e.stopPropagation();
-    navigateToSearch(author);
+    if (navigateToChannel) {
+      navigateToChannel(video.authorId || video.uploaderUrl || author, {
+        author,
+        authorThumbnail
+      });
+    } else {
+      navigateToSearch(author);
+    }
   };
 
   return (
@@ -130,7 +138,7 @@ export default function VideoCard({ video, priority = false }) {
       onClick={handleClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => { setIsHovered(false); }}
-      className="group relative cursor-pointer flex flex-col rounded-3xl bg-[#111116] sm:bg-[#131319] border border-white/[0.05] hover:border-neon-purple/50 hover:bg-[#161622] transition-all duration-300 overflow-hidden hover:shadow-[0_16px_36px_rgba(0,0,0,0.85),0_0_25px_rgba(139,92,246,0.22)] hover:-translate-y-1.5 active:scale-[0.985]"
+      className="group relative cursor-pointer flex flex-col rounded-3xl glass-card overflow-hidden active:scale-[0.985]"
       dir="rtl"
     >
       {/* 16:9 Thumbnail Area */}
@@ -269,7 +277,7 @@ export default function VideoCard({ video, priority = false }) {
 
           {/* Dropdown Menu Popup */}
           {menuOpen && (
-            <div className="absolute left-0 top-full mt-1 w-44 rounded-2xl bg-[#14141d] border border-white/10 shadow-2xl p-1.5 z-30 flex flex-col gap-1 animate-fade-in backdrop-blur-xl">
+            <div className="absolute left-0 top-full mt-1 w-44 rounded-2xl glass-panel p-1.5 z-30 flex flex-col gap-1 animate-fade-in">
               <button
                 type="button"
                 onClick={handleBookmarkToggle}

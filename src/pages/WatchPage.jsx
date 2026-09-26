@@ -187,7 +187,7 @@ export default function WatchPage() {
 
           {/* Video Details */}
           {loading ? (
-            <div className="mt-4 p-6 rounded-2xl bg-[#131318] border border-white/5 animate-pulse space-y-4">
+            <div className="mt-4 p-6 rounded-2xl glass-card animate-pulse space-y-4">
               <div className="h-6 bg-void-750 rounded-md w-3/4" />
               <div className="h-4 bg-void-800 rounded-md w-1/3" />
               <div className="h-16 bg-void-850 rounded-xl w-full" />
@@ -208,7 +208,7 @@ export default function WatchPage() {
             {relatedLoading && relatedVideos.length === 0 ? (
               <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="flex gap-3 p-2 rounded-xl bg-[#141419] border border-white/[0.03] animate-pulse">
+                  <div key={i} className="flex gap-3 p-2 rounded-xl glass-card animate-pulse">
                     <div className="w-32 aspect-video bg-void-750 rounded-lg shrink-0" />
                     <div className="flex-1 space-y-2 py-1">
                       <div className="h-3 bg-void-700 rounded w-full" />
@@ -219,7 +219,7 @@ export default function WatchPage() {
                 ))}
               </div>
             ) : relatedVideos.length === 0 ? (
-              <div className="p-4 rounded-xl bg-[#141419] border border-white/5 text-xs text-void-400 text-center">
+              <div className="p-4 rounded-xl glass-card text-xs text-void-400 text-center">
                 لا توجد فيديوهات مقترحة إضافية حالياً.
               </div>
             ) : (
@@ -234,7 +234,7 @@ export default function WatchPage() {
                     <div
                       key={recId + idx}
                       onClick={() => navigateToWatch(recId, rec)}
-                      className="group cursor-pointer flex gap-3 p-2 rounded-xl bg-[#141419] hover:bg-[#191924] border border-white/[0.04] hover:border-neon-purple/30 transition-all duration-150"
+                      className="group cursor-pointer flex gap-3 p-2 rounded-xl glass-card transition-all duration-150"
                     >
                       {/* Thumbnail */}
                       <div className="relative w-32 sm:w-36 aspect-video rounded-lg overflow-hidden bg-black shrink-0">

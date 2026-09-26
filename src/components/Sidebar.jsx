@@ -91,7 +91,7 @@ export default function Sidebar() {
       </div>
 
       {/* 2. Streaming Server (Invidious Instance) */}
-      <div className="rounded-2xl bg-[#14141d] border border-white/[0.06] p-3 flex flex-col gap-2.5 shadow-sm">
+      <div className="rounded-2xl glass-card p-3 flex flex-col gap-2.5">
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-white flex items-center gap-1.5">
             <Server size={14} className="text-neon-purple" />
@@ -120,7 +120,7 @@ export default function Sidebar() {
       </div>
 
       {/* 3. Trending Region Selector */}
-      <div className="rounded-2xl bg-[#14141d] border border-white/[0.06] p-3 flex flex-col gap-2.5 shadow-sm">
+      <div className="rounded-2xl glass-card p-3 flex flex-col gap-2.5">
         <span className="text-xs font-bold text-white flex items-center gap-1.5">
           <Globe size={14} className="text-neon-purple" />
           منطقة المحتوى والتريند
@@ -148,7 +148,7 @@ export default function Sidebar() {
       </div>
 
       {/* 4. Playback Quality & Data Preferences */}
-      <div className="rounded-2xl bg-[#14141d] border border-white/[0.06] p-3 flex flex-col gap-3 shadow-sm">
+      <div className="rounded-2xl glass-card p-3 flex flex-col gap-3">
         <span className="text-xs font-bold text-white flex items-center gap-1.5">
           <Sliders size={14} className="text-neon-purple" />
           إعدادات التشغيل والجودة
@@ -213,7 +213,7 @@ export default function Sidebar() {
       </div>
 
       {/* 5. Storage & History Management */}
-      <div className="rounded-2xl bg-[#14141d] border border-white/[0.06] p-3 flex flex-col gap-2.5 shadow-sm">
+      <div className="rounded-2xl glass-card p-3 flex flex-col gap-2.5">
         <span className="text-xs font-bold text-white flex items-center gap-1.5">
           <HardDrive size={14} className="text-neon-purple" />
           إدارة الذاكرة والسجل
@@ -331,7 +331,7 @@ export default function Sidebar() {
          ========================================================= */}
       {isSidebarOpen && (
         <aside 
-          className="hidden lg:flex flex-col shrink-0 sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar transition-all duration-300 w-80 rounded-3xl bg-[#0e0e14]/90 border border-white/[0.08] backdrop-blur-2xl shadow-2xl animate-fade-in mb-6"
+          className="hidden lg:flex flex-col shrink-0 sticky top-20 h-[calc(100vh-6rem)] overflow-y-auto no-scrollbar transition-all duration-300 w-80 rounded-3xl glass-panel animate-fade-in mb-6"
           dir="rtl"
         >
           {renderContent()}
@@ -350,7 +350,7 @@ export default function Sidebar() {
           />
 
           {/* Drawer Panel */}
-          <div className="relative w-84 max-w-[85vw] h-full bg-[#101017] border-l border-white/10 shadow-2xl flex flex-col z-10 animate-slide-left overflow-y-auto no-scrollbar">
+          <div className="relative w-84 max-w-[85vw] h-full glass-panel !rounded-none !border-t-0 !border-b-0 shadow-2xl flex flex-col z-10 animate-slide-left overflow-y-auto no-scrollbar">
             {renderContent()}
           </div>
         </div>

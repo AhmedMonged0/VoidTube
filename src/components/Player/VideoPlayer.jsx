@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, Loader2, AlertCircle, RefreshCw, MonitorPlay, Sparkles, ChevronDown } from 'lucide-react';
+import { Play, Pause, Loader2, AlertCircle, RefreshCw, MonitorPlay, Sparkles, ChevronDown, Headphones, RotateCcw, RotateCw, Music } from 'lucide-react';
 import PlayerControls from './PlayerControls';
 import { useApp } from '../../context/AppContext';
 
@@ -12,7 +12,18 @@ export default function VideoPlayer({
   onMinimize = null,
   playerRef = null,
 }) {
-  const { activeInstance } = useApp();
+  const {
+    activeInstance,
+    playbackSpeed,
+    setPlaybackSpeed,
+    isLoop,
+    toggleLoop,
+    sleepTimer,
+    startSleepTimer,
+    cancelSleepTimer,
+    showToast
+  } = useApp();
+
   const containerRef = useRef(null);
   const videoRef = useRef(null);
   const hideControlsTimerRef = useRef(null);
@@ -27,6 +38,8 @@ export default function VideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [buffering, setBuffering] = useState(false);
   const [centerIcon, setCenterIcon] = useState(null); // 'play' | 'pause'
+  const [skipRipple, setSkipRipple] = useState(null); // { side: 'left' | 'right', text: '-10s' | '+10s' }
+  const [isAudioOnly, setIsAudioOnly] = useState(false);
 
   // Stream engine: direct vs embed fallback
   const [useEmbed, setUseEmbed] = useState(false);
@@ -35,6 +48,18 @@ export default function VideoPlayer({
 
   // Extract available formats
   const formatStreams = videoData?.formatStreams || [];
+
+  // Listen to sleep timer event
+  useEffect(() => {
+    const handleSleepTimerTrigger = () => {
+      if (videoRef.current && !videoRef.current.paused) {
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+    };
+    window.addEventListener('voidtube-sleep-timer-trigger', handleSleepTimerTrigger);
+    return () => window.removeEventListener('voidtube-sleep-timer-trigger', handleSleepTimerTrigger);
+  }, []);
 
   // Initialize best format stream (prefer blob, downloaded url, or 720p/360p MP4)
   useEffect(() => {
@@ -48,7 +73,6 @@ export default function VideoPlayer({
         URL.revokeObjectURL(blobUrl);
       };
     } else if (videoData?.url) {
-      // Direct downloaded MP4 stream or local URL!
       setSelectedFormat({ url: videoData.url, resolution: videoData.quality || '720p HD', container: 'mp4' });
       setStreamError(false);
       setUseEmbed(false);
@@ -59,7 +83,6 @@ export default function VideoPlayer({
       setSelectedFormat(preferred);
       setStreamError(false);
     } else {
-      // If no direct format streams available from instance, automatically switch to embed mode
       setUseEmbed(true);
     }
   }, [videoData, formatStreams]);
@@ -69,17 +92,23 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
 
+    // Apply speed and loop
+    video.playbackRate = playbackSpeed;
+    video.loop = isLoop;
+
     const handleTimeUpdate = () => setCurrentTime(video.currentTime);
     const handleLoadedMetadata = () => {
       setDuration(video.duration || videoData?.lengthSeconds || 0);
       setBuffering(false);
+      video.playbackRate = playbackSpeed;
+      video.loop = isLoop;
     };
     const handlePlay = () => setIsPlaying(true);
     const handlePause = () => setIsPlaying(false);
     const handleWaiting = () => setBuffering(true);
     const handlePlaying = () => setBuffering(false);
     const handleError = () => {
-      console.warn('[VoidTube Player] Direct stream failed or blocked by CORS.');
+      console.warn('[VoidTube Player] Direct stream error, fallback to embed.');
       setStreamError(true);
       if (!videoData?.blob && !videoData?.url) {
         setUseEmbed(true);
@@ -103,7 +132,7 @@ export default function VideoPlayer({
       video.removeEventListener('playing', handlePlaying);
       video.removeEventListener('error', handleError);
     };
-  }, [selectedFormat, videoData]);
+  }, [selectedFormat, videoData, playbackSpeed, isLoop]);
 
   // Handle Play/Pause
   const togglePlay = useCallback(() => {
@@ -129,12 +158,18 @@ export default function VideoPlayer({
     }
   }, []);
 
-  // Handle Skip
+  // Handle Skip with visual ripple
   const handleSkip = useCallback((seconds) => {
     if (videoRef.current) {
       const next = Math.max(0, Math.min(duration, videoRef.current.currentTime + seconds));
       videoRef.current.currentTime = next;
       setCurrentTime(next);
+
+      setSkipRipple({
+        side: seconds > 0 ? 'right' : 'left',
+        text: seconds > 0 ? `+${seconds}s` : `${seconds}s`
+      });
+      setTimeout(() => setSkipRipple(null), 600);
     }
   }, [duration]);
 
@@ -157,6 +192,22 @@ export default function VideoPlayer({
     }
   }, [isMuted]);
 
+  // Handle Picture-in-Picture
+  const togglePiP = useCallback(async () => {
+    const video = videoRef.current;
+    if (!video) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (document.pictureInPictureEnabled) {
+        await video.requestPictureInPicture();
+      }
+    } catch (err) {
+      console.warn('PiP error:', err);
+      showToast('تعذر فتح النافذة العائمة للنظام على هذا المتصفح', 'info');
+    }
+  }, [showToast]);
+
   // Handle Fullscreen
   const toggleFullscreen = useCallback(() => {
     if (!containerRef.current) return;
@@ -168,6 +219,15 @@ export default function VideoPlayer({
       setIsFullscreen(false);
     }
   }, []);
+
+  // Handle speed change
+  const handleSelectPlaybackSpeed = useCallback((speed) => {
+    setPlaybackSpeed(speed);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = speed;
+    }
+    showToast(`سرعة التشغيل: ${speed}x`, 'info');
+  }, [setPlaybackSpeed, showToast]);
 
   // Sync fullscreen change event
   useEffect(() => {
@@ -185,7 +245,21 @@ export default function VideoPlayer({
     if (isPlaying) {
       hideControlsTimerRef.current = setTimeout(() => {
         setShowControls(false);
-      }, 2800);
+      }, 3000);
+    }
+  };
+
+  // Double click / tap on sides to seek
+  const handleDoubleTap = (e) => {
+    if (isMini || useEmbed) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    if (clickX < rect.width * 0.35) {
+      handleSkip(-10);
+    } else if (clickX > rect.width * 0.65) {
+      handleSkip(10);
+    } else {
+      togglePlay();
     }
   };
 
@@ -211,15 +285,20 @@ export default function VideoPlayer({
       } else if (e.key === 't') {
         e.preventDefault();
         onToggleTheater();
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        toggleLoop();
+        showToast(!isLoop ? 'تم تفعيل تكرار الفيديو' : 'تم تعطيل التكرار', 'info');
+      } else if (e.key === 'p' || e.key === 'P') {
+        e.preventDefault();
+        togglePiP();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlay, handleSkip, toggleMute, toggleFullscreen, onToggleTheater]);
+  }, [togglePlay, handleSkip, toggleMute, toggleFullscreen, onToggleTheater, toggleLoop, isLoop, togglePiP, showToast]);
 
-  // Embed URL for fallback
-  // Using privacy-first YouTube nocookie with clean distraction-free parameters or Invidious embed
   const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&iv_load_policy=3`;
 
   // Keep playerRef updated for external controls (e.g., Mini Player bar)
@@ -234,6 +313,8 @@ export default function VideoPlayer({
     };
   }
 
+  const posterImg = videoData?.thumbnailUrl || (videoData?.videoThumbnails?.[0]?.url) || `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
   return (
     <div
       ref={containerRef}
@@ -242,14 +323,14 @@ export default function VideoPlayer({
         isMini ? 'pointer-events-none' : ''
       }`}
     >
-      {/* Minimize Overlay Button (Shown on hover/controls when in full player mode) */}
+      {/* Minimize Overlay Button */}
       {!isMini && onMinimize && (
         <button
           onClick={(e) => {
             e.stopPropagation();
             onMinimize();
           }}
-          className={`absolute top-3 left-3 z-30 p-2 rounded-full bg-black/60 hover:bg-neon-purple text-white border border-white/10 backdrop-blur-md transition-all duration-200 active:scale-90 shadow-xl ${
+          className={`absolute top-3 left-3 z-30 p-2 rounded-2xl bg-black/60 hover:bg-neon-purple text-white border border-white/10 backdrop-blur-md transition-all duration-200 active:scale-90 shadow-xl ${
             showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
           title="تصغير المشغل للمشاهدة أثناء التصفح (مثل يوتيوب)"
@@ -260,28 +341,71 @@ export default function VideoPlayer({
 
       {!useEmbed ? (
         /* Engine 1: Native HTML5 Direct Player */
-        <div className="relative w-full h-full flex items-center justify-center">
+        <div
+          className="relative w-full h-full flex items-center justify-center cursor-pointer"
+          onDoubleClick={handleDoubleTap}
+        >
+          {/* HTML5 Video element */}
           <video
             ref={videoRef}
             src={selectedFormat?.url}
-            poster={videoData?.thumbnailUrl || (videoData?.videoThumbnails?.[0]?.url)}
+            poster={posterImg}
             onClick={!isMini ? togglePlay : undefined}
             playsInline
-            className="w-full h-full object-contain cursor-pointer"
+            className={`w-full h-full object-contain ${isAudioOnly ? 'opacity-0' : 'opacity-100'}`}
           />
+
+          {/* Audio-Only Mode Ambient View */}
+          {isAudioOnly && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#09090e] p-6 text-center z-10 pointer-events-none">
+              {/* Glowing animated soundwave disc */}
+              <div className="relative w-44 h-44 sm:w-56 sm:h-56 rounded-full border border-neon-purple/40 shadow-[0_0_60px_rgba(139,92,246,0.35)] flex items-center justify-center p-3 animate-spin-slow">
+                <img
+                  src={posterImg}
+                  alt={videoData?.title}
+                  className="w-full h-full object-cover rounded-full shadow-inner"
+                />
+                <div className="absolute w-12 h-12 rounded-full bg-black/80 border border-white/20 flex items-center justify-center">
+                  <Music size={20} className="text-neon-purple animate-pulse" />
+                </div>
+              </div>
+              <div className="mt-5 max-w-md">
+                <span className="px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold inline-flex items-center gap-1.5 mb-2">
+                  <Headphones size={13} />
+                  وضع الصوت فائق التوفير (Audio-Only)
+                </span>
+                <h3 className="text-white font-bold text-sm line-clamp-1">{videoData?.title || 'مقطع صوتي'}</h3>
+                <p className="text-void-400 text-xs mt-1">{videoData?.author || 'قناة يوتيوب'}</p>
+              </div>
+            </div>
+          )}
 
           {/* Buffering Indicator */}
           {!isMini && buffering && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none">
-              <Loader2 size={44} className="text-neon-purple animate-spin" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none z-20">
+              <Loader2 size={46} className="text-neon-purple animate-spin" />
+            </div>
+          )}
+
+          {/* Skip Ripple Feedback Indicator */}
+          {skipRipple && (
+            <div
+              className={`absolute top-0 bottom-0 w-1/3 flex items-center justify-center pointer-events-none z-20 animate-fade-in ${
+                skipRipple.side === 'left' ? 'left-0 bg-white/5 rounded-r-full' : 'right-0 bg-white/5 rounded-l-full'
+              }`}
+            >
+              <div className="flex flex-col items-center gap-1 text-white bg-black/70 px-4 py-2 rounded-2xl border border-white/10 backdrop-blur-md">
+                {skipRipple.side === 'left' ? <RotateCcw size={26} /> : <RotateCw size={26} />}
+                <span className="text-xs font-bold font-mono">{skipRipple.text}</span>
+              </div>
             </div>
           )}
 
           {/* Play/Pause Center Flash Animation */}
           {!isMini && centerIcon && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="w-16 h-16 rounded-full bg-black/70 backdrop-blur-md flex items-center justify-center border border-white/20 text-white animate-fade-in scale-110">
-                {centerIcon === 'play' ? <Play size={28} className="fill-white ml-1" /> : <Pause size={28} className="fill-white" />}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <div className="w-16 h-16 rounded-2xl bg-black/75 backdrop-blur-md flex items-center justify-center border border-white/20 text-white animate-fade-in scale-110 shadow-2xl">
+                {centerIcon === 'play' ? <Play size={28} className="fill-white ml-0.5" /> : <Pause size={28} className="fill-white" />}
               </div>
             </div>
           )}
@@ -318,6 +442,16 @@ export default function VideoPlayer({
               showControls={showControls}
               isDirectStream={true}
               onToggleEngine={() => { if (!videoData?.blob) setUseEmbed(true); }}
+              playbackSpeed={playbackSpeed}
+              onSelectPlaybackSpeed={handleSelectPlaybackSpeed}
+              isLoop={isLoop}
+              onToggleLoop={toggleLoop}
+              onTogglePiP={togglePiP}
+              sleepTimer={sleepTimer}
+              onStartSleepTimer={startSleepTimer}
+              onCancelSleepTimer={cancelSleepTimer}
+              isAudioOnly={isAudioOnly}
+              onToggleAudioOnly={() => setIsAudioOnly(prev => !prev)}
             />
           )}
         </div>
@@ -339,11 +473,11 @@ export default function VideoPlayer({
                 setUseEmbed(false);
                 setStreamError(false);
               }}
-              className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3 py-1 rounded-full bg-black/85 hover:bg-neon-purple text-white text-[11px] font-semibold border border-white/10 backdrop-blur-md transition-all shadow-lg"
-              title="Attempt direct HTML5 stream"
+              className="absolute top-3 right-3 z-20 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/85 hover:bg-neon-purple text-white text-[11px] font-bold border border-white/10 backdrop-blur-md transition-all shadow-lg active:scale-95"
+              title="العودة للمشغل المباشر Direct HTML5"
             >
-              <RefreshCw size={12} />
-              Switch to Direct Player
+              <RefreshCw size={13} />
+              التبديل للمشغل المباشر
             </button>
           )}
         </div>

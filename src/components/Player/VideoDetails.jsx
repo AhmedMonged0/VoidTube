@@ -17,7 +17,7 @@ import { formatViews, formatTimeAgo } from '../../utils/formatters';
 import { Loader2 } from 'lucide-react';
 
 export default function VideoDetails({ videoData, videoId }) {
-  const { isWatchLater, toggleWatchLater, navigateToSearch, triggerBackgroundDownload, isVideoDownloaded, downloadingVideos } = useApp();
+  const { isWatchLater, toggleWatchLater, navigateToSearch, navigateToChannel, triggerBackgroundDownload, isVideoDownloaded, downloadingVideos } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -38,7 +38,14 @@ export default function VideoDetails({ videoData, videoId }) {
 
   const handleChannelClick = () => {
     if (videoData.author) {
-      navigateToSearch(videoData.author);
+      if (navigateToChannel) {
+        navigateToChannel(videoData.authorId || videoData.author, {
+          author: videoData.author,
+          authorThumbnail: videoData.authorThumbnails?.[0]?.url
+        });
+      } else {
+        navigateToSearch(videoData.author);
+      }
     }
   };
 
