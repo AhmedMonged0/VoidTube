@@ -54,6 +54,7 @@ export function AppProvider({ children }) {
     if (page === 'bookmarks' || page === 'library') return { page: 'library', query: '', videoId: '' };
     if (page === 'audio' || page === 'focus') return { page: 'audio', query: '', videoId: '' };
     if (page === 'explore') return { page: 'explore', query: '', videoId: '' };
+    if (page === 'settings') return { page: 'settings', query: '', videoId: '' };
     return { page: 'home', query: '', videoId: '' };
   });
 
@@ -118,6 +119,25 @@ export function AppProvider({ children }) {
   const [autoplayNext, setAutoplayNextState] = useState(() => {
     return localStorage.getItem('voidtube_autoplay_next') !== 'false';
   });
+
+  // Visual Accent Theme
+  const [accentTheme, setAccentThemeState] = useState(() => {
+    return localStorage.getItem('voidtube_accent_theme_v1') || 'purple';
+  });
+
+  const setAccentTheme = useCallback((theme) => {
+    setAccentThemeState(theme);
+    try {
+      localStorage.setItem('voidtube_accent_theme_v1', theme);
+      document.documentElement.dataset.accent = theme;
+    } catch(e) {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      document.documentElement.dataset.accent = accentTheme;
+    } catch(e) {}
+  }, [accentTheme]);
 
   // Recent Searches
   const [recentSearches, setRecentSearches] = useState(() => safeGetStorage(STORAGE_KEYS.RECENT_SEARCHES));
@@ -383,6 +403,8 @@ export function AppProvider({ children }) {
         setNav({ page: 'audio', query: '', videoId: '' });
       } else if (page === 'explore') {
         setNav({ page: 'explore', query: '', videoId: '' });
+      } else if (page === 'settings') {
+        setNav({ page: 'settings', query: '', videoId: '', channelId: '' });
       } else {
         setNav({ page: 'home', query: '', videoId: '' });
       }
@@ -468,9 +490,66 @@ export function AppProvider({ children }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
+  const navigateToSettings = useCallback(() => {
+    window.history.pushState({}, '', `?page=settings`);
+    setNav({ page: 'settings', query: '', videoId: '', channelId: '' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const navigateToBookmarks = useCallback(() => {
     navigateToLibrary();
   }, [navigateToLibrary]);
+
+  // Export / Import Backup JSON
+  const exportBackupData = useCallback(() => {
+    try {
+      const backup = {
+        app: 'VoidTube',
+        version: CURRENT_APP_VERSION,
+        exportedAt: new Date().toISOString(),
+        watchLater,
+        history,
+        recentSearches,
+        settings: {
+          region,
+          defaultQuality,
+          dataSaver,
+          autoplayNext
+        }
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `voidtube-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('تم تصدير النسخة الاحتياطية بنجاح 💾', 'success');
+    } catch (e) {
+      showToast('تعذر تصدير النسخة الاحتياطية', 'error');
+    }
+  }, [watchLater, history, recentSearches, region, defaultQuality, dataSaver, autoplayNext, showToast]);
+
+  const importBackupData = useCallback((file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.watchLater && Array.isArray(data.watchLater)) {
+          setWatchLater(data.watchLater);
+          safeSetStorage(STORAGE_KEYS.WATCH_LATER, data.watchLater);
+        }
+        if (data.history && Array.isArray(data.history)) {
+          setHistory(data.history);
+          safeSetStorage(STORAGE_KEYS.HISTORY, data.history);
+        }
+        showToast('تمت استعادة النسخة الاحتياطية بنجاح! ✨', 'success');
+      } catch (err) {
+        showToast('الملف غير صالح أو تالف', 'error');
+      }
+    };
+    reader.readAsText(file);
+  }, [showToast]);
 
   // Keep live references for Android hardware back button handler
   const navRef = useRef(nav);
@@ -667,6 +746,9 @@ export function AppProvider({ children }) {
         navigateToAudio,
         navigateToLibrary,
         navigateToExplore,
+        navigateToSettings,
+        accentTheme,
+        setAccentTheme,
         playbackSpeed,
         setPlaybackSpeed,
         isLoop,
@@ -719,6 +801,8 @@ export function AppProvider({ children }) {
         autoplayNext,
         toggleAutoplayNext,
         clearAppCache,
+        exportBackupData,
+        importBackupData,
         checkForUpdates,
         appToast,
         setAppToast,

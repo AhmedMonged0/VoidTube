@@ -9,7 +9,8 @@ import {
   Compass,
   Headphones,
   Home,
-  BookOpen
+  BookOpen,
+  Settings
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import SearchBar from './SearchBar';
@@ -21,6 +22,7 @@ export default function Header({ onOpenApkModal }) {
     navigateToExplore,
     navigateToAudio,
     navigateToLibrary,
+    navigateToSettings,
     downloads,
     watchLater,
     setIsDownloadsOpen,
@@ -41,6 +43,7 @@ export default function Header({ onOpenApkModal }) {
   const isExplore = nav.page === 'explore';
   const isAudio = nav.page === 'audio';
   const isLibrary = nav.page === 'library';
+  const isSettings = nav.page === 'settings';
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[#0a0a0c]/90 backdrop-blur-xl border-b border-white/[0.06] transition-colors duration-200">
@@ -176,6 +179,27 @@ export default function Header({ onOpenApkModal }) {
                 {downloads.length}
               </span>
             )}
+          </button>
+
+          {/* Dedicated Settings Button */}
+          <button
+            onClick={navigateToSettings}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full border transition-all duration-150 group ${
+              isSettings
+                ? 'bg-neon-purple text-white border-neon-purple shadow-[0_0_15px_rgba(139,92,246,0.4)]'
+                : 'bg-[#141419] hover:bg-[#1a1a24] border-white/10 text-void-300 hover:text-white'
+            }`}
+            title="الإعدادات والتحكم"
+          >
+            <Settings
+              size={15}
+              className={`transition-all ${
+                isSettings ? 'animate-spin-slow text-white' : 'text-void-400 group-hover:text-neon-purple group-hover:rotate-45'
+              }`}
+            />
+            <span className="hidden xl:inline text-xs font-semibold">
+              الإعدادات
+            </span>
           </button>
 
         </div>

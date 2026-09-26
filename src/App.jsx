@@ -9,6 +9,7 @@ import ChannelPage from './pages/ChannelPage';
 import AudioFocusPage from './pages/AudioFocusPage';
 import LibraryPage from './pages/LibraryPage';
 import ExplorePage from './pages/ExplorePage';
+import SettingsPage from './pages/SettingsPage';
 import WatchLaterDrawer from './components/WatchLaterDrawer';
 import DownloadsDrawer from './components/DownloadsDrawer';
 import InstanceSelectorModal from './components/InstanceSelectorModal';
@@ -51,6 +52,8 @@ function AppContent() {
         return <ExplorePage />;
       case 'bookmarks':
         return <BookmarksPage />;
+      case 'settings':
+        return <SettingsPage />;
       case 'home':
       default:
         return <HomePage />;

@@ -23,6 +23,7 @@ export default function Sidebar() {
   const {
     isSidebarOpen,
     setIsSidebarOpen,
+    navigateToSettings,
     activeInstance,
     setIsInstanceModalOpen,
     region,
@@ -61,7 +62,7 @@ export default function Sidebar() {
   const qualityOptions = ['auto', '1080p', '720p', '480p', '360p'];
 
   const renderContent = () => (
-    <div className="flex flex-col gap-5 p-4 text-right" dir="rtl">
+    <div className="flex flex-col gap-4 p-4 text-right" dir="rtl">
       
       {/* 1. Header */}
       <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
@@ -89,6 +90,23 @@ export default function Sidebar() {
           <X size={18} />
         </button>
       </div>
+
+      {/* Prominent Link to Full Dedicated Settings Page */}
+      <button
+        onClick={() => {
+          setIsSidebarOpen(false);
+          navigateToSettings();
+        }}
+        className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-neon-purple/20 to-purple-600/10 hover:from-neon-purple/30 hover:to-purple-600/20 border border-neon-purple/40 text-white transition-all group shadow-sm active:scale-98"
+      >
+        <div className="flex items-center gap-2">
+          <Settings size={15} className="text-neon-purple group-hover:rotate-90 transition-transform" />
+          <span className="text-xs font-bold">فتح صفحة الإعدادات الكاملة</span>
+        </div>
+        <span className="text-[10px] text-neon-purple font-mono bg-neon-purple/20 px-2 py-0.5 rounded-full font-bold">
+          عرض كامل ↗
+        </span>
+      </button>
 
       {/* 2. Streaming Server (Invidious Instance) */}
       <div className="rounded-2xl glass-card p-3 flex flex-col gap-2.5">
